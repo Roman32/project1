@@ -99,8 +99,7 @@ int main(int argc, char argv[]){
 		FD_ZERO(&portUp);
 		FD_SET(sockIn, &portUp);
 		FD_SET(sockOut, &portUp);		
-	}
-	
+	}	
 	
 	return 0;
 }

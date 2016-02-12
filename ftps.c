@@ -77,7 +77,7 @@ void receiveFile(int sock){
 	}
 	memcpy(&fileSize,buffer,4);
 	fileSize = ntohl(fileSize);
-	printf("The size of the file is: %d bytes.\n",fileSize);
+	printf("The size of the file is: %ld bytes.\n",fileSize);
 	bzero(buffer,1000);
 	/*Recieves the file name in 20 bytes*/
 	bytesIn = RECV(sock,buffer,20,MSG_WAITALL);
