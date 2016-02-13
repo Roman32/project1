@@ -121,6 +121,7 @@ int print_list(){
     }
     return 0;
 }
+
 int add_to_list(float d_time, int s_num){
     struct time_node *new_t_node_ptr = (struct time_node*)malloc(sizeof(struct time_node));
     struct time_node *prev_p  = head;
@@ -143,7 +144,7 @@ int add_to_list(float d_time, int s_num){
         }else{
                 printf("here  x\n");
 
-              d_time = d_time -(cursor -> delta_time);
+               d_time = d_time -(cursor -> delta_time);
 
 
 
@@ -164,6 +165,8 @@ int add_to_list(float d_time, int s_num){
                         new_t_node_ptr -> next = NULL;
                         new_t_node_ptr -> prev = prev_p;
                         new_t_node_ptr -> delta_time = d_time;
+												//here we are at the end of the list, no need
+												//to update the remaining list (there is nothing remaining)
 
                         }else{
                             cursor -> prev -> next = new_t_node_ptr;
@@ -171,6 +174,11 @@ int add_to_list(float d_time, int s_num){
                             cursor -> prev = new_t_node_ptr;
                             new_t_node_ptr -> next = cursor;
                             new_t_node_ptr -> delta_time = d_time;
+														//now we need to update the remaining items
+														//since we insterted into the middle of the list
+														while(cursor != NULL){
+															
+														}
                         }
 
                 }else{
@@ -178,6 +186,9 @@ int add_to_list(float d_time, int s_num){
                     new_t_node_ptr -> next = NULL;
                     new_t_node_ptr -> delta_time = d_time;
                     new_t_node_ptr -> prev = head;
+										//new node is second in the list and nothing comes after
+										//so no need to update the remaining list since there is
+										//none
                 }
 
 
@@ -189,7 +200,7 @@ int add_to_list(float d_time, int s_num){
         new_t_node_ptr -> next = NULL;
         new_t_node_ptr -> prev = NULL;
         head = new_t_node_ptr;
-        printf("the damn node seq_num is %d\n",head -> seq_num);
+        //no need to update times since only one element in list
     }
     return -1;
 }
@@ -203,7 +214,7 @@ int remove_from_list(int s_num){
 		return -1;
 	}
 
-	cursor = head;	
+	cursor = head;
 	if(head -> seq_num == s_num){
 		removed = head -> seq_num;
 		head = head -> next;
@@ -213,24 +224,24 @@ int remove_from_list(int s_num){
 			cursor -> delta_time = cursor->delta_time - currHeadTime;
 			cursor = cursor->next;
 		}
-		return removed;	
+		return removed;
 	}else{
 		cursor = cursor -> next;
-		while(cursor != NULL  && cursor -> seq_num != s_num){ 
+		while(cursor != NULL  && cursor -> seq_num != s_num){
 			cursor = cursor->next;
 		}
 		if(cursor == NULL){
 			removed = cursor ->prev ->seq_num;
 			cursor -> prev -> next = NULL;
-		}else{	
-			removed = cursor -> seq_num;		
+		}else{
+			removed = cursor -> seq_num;
 			currHeadTime = cursor -> prev ->delta_time;
 			cursor -> prev -> next = cursor -> next;
 			cursor -> next -> prev = cursor ->prev;
 			while(cursor != NULL){ /*updates the delta times based on new head time*/
 				cursor -> delta_time = cursor->delta_time - currHeadTime;
 				cursor = cursor->next;
-			}			
+			}
 		}
 
 	}
