@@ -67,14 +67,14 @@ int main(){
 
  printf("Timer waiting on port # %d\n", ntohs(timer_sockaddr.sin_port));
 */
- add_to_list(5.00,1);
- add_to_list(12.00,2);
- add_to_list(14.00,3);
- add_to_list(3.00,4);
- add_to_list(19.00,5);
+ add_to_list(30.00,1);
+ add_to_list(34.00,2);
+ add_to_list(35.00,3);
+ add_to_list(36.00,4);
+ add_to_list(38.00,5);
  print_list();
 printf("New List~~~~~~~\n");
-int removed = remove_from_list(3);
+int removed = remove_from_list(5);
 printf("Seq_num removed is  : %d\n",removed);
 print_list();
 }
@@ -85,7 +85,7 @@ int recv_from_tcpd(){
 int timer_sockaddr_len = sizeof(timer_sockaddr);
 int buflen = max_timer_msg_len;
 char recv_buff[buflen];
-
+/*
     while(1){
 
     	if(recvfrom(tcpd_sock, recv_buff, buflen, 0, (struct sockaddr *)&timer_sockaddr, &buflen) < 0) {
@@ -106,8 +106,8 @@ char recv_buff[buflen];
 
         }
 
-    }
-
+    }*/
+ return 1;
 }
 int print_list(){
     if(head == NULL){
@@ -174,11 +174,10 @@ int add_to_list(float d_time, int s_num){
                             cursor -> prev = new_t_node_ptr;
                             new_t_node_ptr -> next = cursor;
                             new_t_node_ptr -> delta_time = d_time;
-														//now we need to update the remaining items
+														//now we need to update the next item
 														//since we insterted into the middle of the list
-														while(cursor != NULL){
-															
-														}
+														new_t_node_ptr -> next -> delta_time =
+															new_t_node_ptr -> next -> delta_time - new_t_node_ptr -> delta_time;
                         }
 
                 }else{
@@ -217,31 +216,41 @@ int remove_from_list(int s_num){
 	cursor = head;
 	if(head -> seq_num == s_num){
 		removed = head -> seq_num;
-		head = head -> next;
 		currHeadTime = head -> delta_time;
-		cursor = head->next;
-		while(cursor != NULL){ /*updates the delta times based on new head time*/
+		head = head -> next;
+		head -> delta_time = currHeadTime + head -> delta_time;
+		head -> prev = NULL;
+		/*while(cursor != NULL){ //updates the delta times based on new head time//
 			cursor -> delta_time = cursor->delta_time - currHeadTime;
 			cursor = cursor->next;
-		}
+		}*/
+
 		return removed;
 	}else{
 		cursor = cursor -> next;
 		while(cursor != NULL  && cursor -> seq_num != s_num){
 			cursor = cursor->next;
 		}
+
 		if(cursor == NULL){
-			removed = cursor ->prev ->seq_num;
-			cursor -> prev -> next = NULL;
+
+			//this would seg fault if cursor is NULL
+			//removed = cursor ->prev ->seq_num;
+			//cursor -> prev -> next = NULL;
 		}else{
 			removed = cursor -> seq_num;
-			currHeadTime = cursor -> prev ->delta_time;
+			currHeadTime = cursor -> delta_time;
+			if(cursor -> next != NULL){
+				cursor -> next -> delta_time = cursor -> next -> delta_time + currHeadTime;
+				cursor -> next -> prev = cursor ->prev;
+			}
 			cursor -> prev -> next = cursor -> next;
-			cursor -> next -> prev = cursor ->prev;
-			while(cursor != NULL){ /*updates the delta times based on new head time*/
+
+			/*
+			while(cursor != NULL){ //updates the delta times based on new head time
 				cursor -> delta_time = cursor->delta_time - currHeadTime;
 				cursor = cursor->next;
-			}
+			}*/
 		}
 
 	}
