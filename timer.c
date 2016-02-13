@@ -18,8 +18,8 @@ also receive further requests for timers while it is repeatedly waking up and re
 timer value in the first node. The select function call is useful for such purposes.*/
 
 struct time_node{
-	//struct timeval *delta_time;
-	float delta_time;
+	struct timeval *delta_time;
+	//float delta_time;
   int seq_num;
 	struct time_node *next;
   struct time_node *prev;
@@ -70,7 +70,7 @@ timeval_subtract (result, x, y)
 }
 
 //add time node to list
-int add_to_list(float d_time, int s_num);
+int add_to_list(struct timeval *d_time, int s_num);
 //remove time node from list
 int remove_from_list(int s_num);
 
@@ -142,25 +142,59 @@ if(select_ret_val == -1){
 printf("Elasped time in microseconds: %ld ms\n",
 	((curr_time.tv_sec - start_time.tv_sec)*1000000L +
 		curr_time.tv_usec - start_time.tv_usec));
-/**** Unit testing section ****/
- add_to_list(30.00,1);
- add_to_list(34.00,2);
- add_to_list(35.00,3);
- add_to_list(36.00,4);
- add_to_list(38.00,5);
- print_list();
 
+
+
+
+/**** Unit testing section ****/
+ struct timeval *inc_dtime;
+ inc_dtime = malloc(sizeof(struct timeval));
+
+ struct timeval *inc_dtime1;
+ inc_dtime1 = malloc(sizeof(struct timeval));
+
+ struct timeval *inc_dtime2;
+ inc_dtime2 = malloc(sizeof(struct timeval));
+
+ struct timeval *inc_dtime3;
+ inc_dtime3 = malloc(sizeof(struct timeval));
+ 
+ struct timeval *inc_dtime4;
+ inc_dtime4 = malloc(sizeof(struct timeval));
+
+ inc_dtime -> tv_sec = 30;
+ inc_dtime -> tv_usec = 0;
+ add_to_list(inc_dtime,1);
+
+ inc_dtime1 -> tv_sec = 34;
+ inc_dtime1 -> tv_usec = 0;
+ add_to_list(inc_dtime1,2);
+
+ inc_dtime2 -> tv_sec = 35;
+ inc_dtime2 -> tv_usec = 0;
+ add_to_list(inc_dtime2,3);
+
+ inc_dtime3 -> tv_sec = 36;
+ inc_dtime3 -> tv_usec = 0;
+ add_to_list(inc_dtime3,4);
+
+ inc_dtime4 -> tv_sec = 38;
+ inc_dtime4 -> tv_usec = 0;
+ add_to_list(inc_dtime4,5);
+
+ print_list();
+/*
 printf("New List~~~~~~~\n");
 int removed = remove_from_list(5);
 printf("Seq_num removed is  : %d\n",removed);
-print_list();
-
-update_timer(5);
+print_list();*/
+/*
+//update_timer(5);
 printf("5 seconds elapsed\n");
 print_list();
-update_timer(26); //should make head be less than zero
+//update_timer(26); //should make head be less than zero
 printf("26 seconds elapsed\n");
-print_list();
+print_list();*/
 /**** End unit testing section ****/
 }
 
@@ -201,25 +235,39 @@ int print_list(){
     }
     cursor = head;
     while(cursor != NULL){
-        printf("Node seq_num: %d   time: %f\n",cursor->seq_num,cursor -> delta_time);
+        printf("Node seq_num: %d   time: %ld\n",cursor->seq_num,
+				(cursor -> delta_time -> tv_sec + cursor -> delta_time -> tv_usec));
         cursor = cursor -> next;
     }
     return 0;
 }
 
-int add_to_list(float d_time, int s_num){
+int add_to_list(struct timeval *d_time, int s_num){
     struct time_node *new_t_node_ptr = (struct time_node*)malloc(sizeof(struct time_node));
     struct time_node *prev_p  = head;
+
+	  struct timeval *cur_node_time;
+		struct timeval *upd_node_time;
+
+		cur_node_time = malloc(sizeof(struct timeval));
+		upd_node_time = malloc(sizeof(struct timeval));
+
     new_t_node_ptr -> seq_num = s_num;
     cursor = head;
+
     if(head != NULL){
         printf("here\n");
-        if(d_time <= head -> delta_time) {
+        if( (d_time -> tv_sec + d_time -> tv_usec) <=
+						(head -> delta_time -> tv_sec + head -> delta_time -> tv_usec) )
+				{
                 printf("here  0\n");
                 new_t_node_ptr -> next = head;
                 new_t_node_ptr -> prev = NULL;
 
-                head -> delta_time = (head -> delta_time) - d_time;
+                //get the updated timval struct using function (x - y)
+								timeval_subtract (upd_node_time, head -> delta_time, d_time);
+								head -> delta_time = upd_node_time;
+                //head -> delta_time = (head -> delta_time) - d_time;
                 head -> prev = new_t_node_ptr;
 
                 new_t_node_ptr -> delta_time = d_time;
@@ -229,15 +277,16 @@ int add_to_list(float d_time, int s_num){
         }else{
                 printf("here  x\n");
 
-               d_time = d_time -(cursor -> delta_time);
-
+               //d_time = d_time -(cursor -> delta_time);
+               timeval_subtract (d_time, d_time, cursor -> delta_time);
 
 
                 cursor = cursor -> next;
                 if(cursor != NULL){
 
                     while(cursor != NULL && d_time > (cursor -> delta_time)){
-                            d_time = d_time -(cursor -> delta_time);
+                            //d_time = d_time -(cursor -> delta_time);
+														timeval_subtract (d_time, d_time, cursor -> delta_time);
                             prev_p = cursor;
                             cursor = cursor -> next;
 
@@ -261,8 +310,15 @@ int add_to_list(float d_time, int s_num){
                             new_t_node_ptr -> delta_time = d_time;
 														//now we need to update the next item
 														//since we insterted into the middle of the list
+														timeval_subtract (upd_node_time,
+														new_t_node_ptr -> next -> delta_time,
+														new_t_node_ptr -> delta_time);
+														new_t_node_ptr -> next -> delta_time = upd_node_time;
+
+																/*
 														new_t_node_ptr -> next -> delta_time =
-															new_t_node_ptr -> next -> delta_time - new_t_node_ptr -> delta_time;
+															new_t_node_ptr -> next -> delta_time -
+															new_t_node_ptr -> delta_time;*/
                         }
 
                 }else{
@@ -290,6 +346,7 @@ int add_to_list(float d_time, int s_num){
 }
 
 /*Needs some work*/
+/*
 int remove_from_list(int s_num){
 	float currHeadTime; //holder used to calc new delta times.
 	int removed = -1;
@@ -305,10 +362,7 @@ int remove_from_list(int s_num){
 		head = head -> next;
 		head -> delta_time = currHeadTime + head -> delta_time;
 		head -> prev = NULL;
-		/*while(cursor != NULL){ //updates the delta times based on new head time//
-			cursor -> delta_time = cursor->delta_time - currHeadTime;
-			cursor = cursor->next;
-		}*/
+
 
 		return removed;
 	}else{
@@ -330,18 +384,12 @@ int remove_from_list(int s_num){
 				cursor -> next -> prev = cursor ->prev;
 			}
 			cursor -> prev -> next = cursor -> next;
-
-			/*
-			while(cursor != NULL){ //updates the delta times based on new head time
-				cursor -> delta_time = cursor->delta_time - currHeadTime;
-				cursor = cursor->next;
-			}*/
 		}
 
 	}
 	return removed;
-}
-
+}*/
+/*
 void update_timer(float elapsed_time){
 		float head_time = head -> delta_time;
 		float res = head_time - elapsed_time;
@@ -351,4 +399,4 @@ void update_timer(float elapsed_time){
 		}else{
 			head -> delta_time = res;
 		}
-}
+}*/
