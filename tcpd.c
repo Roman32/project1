@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <netinet/ip.h>
 #include <errno.h>
+#include <linux/tcp.h>
 
 
 #include "globals.h"
@@ -13,6 +14,8 @@ struct sockaddr_in client;
 struct sockaddr_in server;
 struct sockaddr_in troll;
 struct sockaddr_in final;
+
+struct tcphdr tcpHead;
 
 typedef struct TrollHeader{
 	struct sockaddr_in header;
