@@ -18,11 +18,21 @@ also receive further requests for timers while it is repeatedly waking up and re
 timer value in the first node. The select function call is useful for such purposes.*/
 
 struct time_node{
+	//struct timeval *delta_time;
 	float delta_time;
-	int seq_num;
+  int seq_num;
 	struct time_node *next;
-    	struct time_node *prev;
+  struct time_node *prev;
 }time_node;
+/*
+The time structures involved are defined in <sys/time.h> and look
+       like
+
+           struct timeval {
+               long    tv_sec;         // seconds
+               long    tv_usec;        // microseconds
+           };*/
+
 
 struct sockaddr_in timer_sockaddr;
 
@@ -30,6 +40,34 @@ struct time_node *head = NULL;
 struct time_node *cursor = NULL;
 int tcpd_sock;
 
+/** from: http://www.gnu.org/software/libc/manual/html_node/Elapsed-Time.html **/
+/* Subtract the ‘struct timeval’ values X and Y,
+   storing the result in RESULT.
+   Return 1 if the difference is negative, otherwise 0. */
+int
+timeval_subtract (result, x, y)
+     struct timeval *result, *x, *y;
+{
+  /* Perform the carry for the later subtraction by updating y. */
+  if (x->tv_usec < y->tv_usec) {
+    int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+    y->tv_usec -= 1000000 * nsec;
+    y->tv_sec += nsec;
+  }
+  if (x->tv_usec - y->tv_usec > 1000000) {
+    int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+    y->tv_usec += 1000000 * nsec;
+    y->tv_sec -= nsec;
+  }
+
+  /* Compute the time remaining to wait.
+     tv_usec is certainly positive. */
+  result->tv_sec = x->tv_sec - y->tv_sec;
+  result->tv_usec = x->tv_usec - y->tv_usec;
+
+  /* Return 1 if result is negative. */
+  return x->tv_sec < y->tv_sec;
+}
 
 //add time node to list
 int add_to_list(float d_time, int s_num);
@@ -50,6 +88,16 @@ int alert_tcpd();
 
 
 int main(){
+
+
+	//for sleeping the program
+	struct timeval timer;
+	//for determining time at which sleep started
+	struct timeval start_time;
+	//when sleep ends, the time at which this occurs is stored here
+	struct timeval curr_time;
+	//for storing the result of curr_time - start_time
+	struct timeval result_time;
 /*Set up for timer_sockaddr Socket*/
     /*
  tcpd_sock = socket(AF_INET,SOCK_DGRAM,0);
@@ -69,6 +117,32 @@ int main(){
 
  printf("Timer waiting on port # %d\n", ntohs(timer_sockaddr.sin_port));
 */
+
+int tv_sub_ret_val;
+int select_ret_val;
+
+//for testing only, watch stdin (fd 0) to see when it has input
+fd_set rfds;
+FD_ZERO(&rfds);
+FD_SET(0,&rfds);
+
+timer.tv_sec = 5;
+timer.tv_usec = 0;
+gettimeofday(&start_time,NULL);
+select_ret_val = select(1,&rfds,NULL,NULL,&timer);
+gettimeofday(&curr_time,NULL);
+
+if(select_ret_val == -1){
+	perror("select()");
+}else if(select_ret_val){
+	printf("Data is now available.\n");
+}else{
+	printf("No data in 5 seconds\n");
+}
+printf("Elasped time in microseconds: %ld ms\n",
+	((curr_time.tv_sec - start_time.tv_sec)*1000000L +
+		curr_time.tv_usec - start_time.tv_usec));
+/**** Unit testing section ****/
  add_to_list(30.00,1);
  add_to_list(34.00,2);
  add_to_list(35.00,3);
@@ -87,7 +161,7 @@ print_list();
 update_timer(26); //should make head be less than zero
 printf("26 seconds elapsed\n");
 print_list();
-
+/**** End unit testing section ****/
 }
 
 
@@ -96,8 +170,8 @@ int recv_from_tcpd(){
 int timer_sockaddr_len = sizeof(timer_sockaddr);
 int buflen = max_timer_msg_len;
 char recv_buff[buflen];
-/*
-    while(1){
+
+
 
     	if(recvfrom(tcpd_sock, recv_buff, buflen, 0, (struct sockaddr *)&timer_sockaddr, &buflen) < 0) {
 
@@ -117,7 +191,7 @@ char recv_buff[buflen];
 
         }
 
-    }*/
+
  return 1;
 }
 int print_list(){
