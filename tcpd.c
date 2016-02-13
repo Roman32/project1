@@ -15,12 +15,16 @@ struct sockaddr_in server;
 struct sockaddr_in troll;
 struct sockaddr_in final;
 
-struct tcphdr tcpHead;
-
 typedef struct TrollHeader{
 	struct sockaddr_in header;
-	char body[1000];
+	//char body[1000];
 }TrollHeader;
+
+typedef struct Packet{
+	struct TrollHeader trollhdr;
+	struct tcphdr tcpHdr;
+	char payload[MSS];
+}Packet;
 
 int main(int argc, char argv[]){
 	
@@ -30,13 +34,12 @@ int main(int argc, char argv[]){
 	int bytesIn =0;
 	int bytesToServ = 0;
 	int bytesToTroll = 0;
-	char buffer[1000];
+	char buffer[MSS];
 	char bufferOut[1016];
-	char buffS[1000];
-	char trollBuf[1001];
+	char buffS[MSS];
 	fd_set portUp;
 	TrollHeader head;
-
+	Packet pckt;
 	if(argc != 1){
 		printf("Error! Proper use is ./tcpd");
 		exit(1);
@@ -64,6 +67,7 @@ int main(int argc, char argv[]){
 	head.header.sin_family = htons(AF_INET);
 	head.header.sin_addr.s_addr = inet_addr(serverIP);
 	head.header.sin_port = htons(TCPDOUT);
+	memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
 	
 	final.sin_family = AF_INET;
 	final.sin_port = htons(SERVERPORT);
@@ -86,8 +90,7 @@ int main(int argc, char argv[]){
 			int addr_len =sizeof(client);
 			bytesIn = recvfrom(sockIn,buffer,sizeof(buffer),0,(struct sockaddr *)&client,&addr_len);
 			printf("Bytes from client :%d\n",bytesIn);
-			//bzero(&head.body,sizeof(head.body));
-			memcpy(&head.body,&buffer,1000);
+			//memcpy(&head.body,&buffer,1000);
 			bytesToTroll = sendto(sockIn,(char *)&head,(sizeof(head.header)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			printf("Sent to the Troll: %d\n",bytesToTroll);
 			

@@ -7,5 +7,6 @@
 #define TCPDOUT 9998
 #define SERVERPORT 9997
 #define TROLLPORT 6666
+#define MSS 1000
 
 #endif
