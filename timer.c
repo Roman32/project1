@@ -37,14 +37,16 @@ int add_to_list(float d_time, int s_num);
 int remove_from_list(int s_num);
 
 int print_list();
-//iterate through list checking times???????
-void check_time_outs();
+//update head node in timeing list
+void update_timer(float elapsed_time);
 
 //recieve info from timer_sockaddr
 int recv_from_tcpd();
 
 //let timer_sockaddr know that something timed out
 int alert_tcpd();
+
+
 
 
 int main(){
@@ -73,10 +75,19 @@ int main(){
  add_to_list(36.00,4);
  add_to_list(38.00,5);
  print_list();
+
 printf("New List~~~~~~~\n");
 int removed = remove_from_list(5);
 printf("Seq_num removed is  : %d\n",removed);
 print_list();
+
+update_timer(5);
+printf("5 seconds elapsed\n");
+print_list();
+update_timer(26); //should make head be less than zero
+printf("26 seconds elapsed\n");
+print_list();
+
 }
 
 
@@ -255,4 +266,15 @@ int remove_from_list(int s_num){
 
 	}
 	return removed;
+}
+
+void update_timer(float elapsed_time){
+		float head_time = head -> delta_time;
+		float res = head_time - elapsed_time;
+		if(res <= 0){
+			head = head -> next;
+			head -> prev = NULL;
+		}else{
+			head -> delta_time = res;
+		}
 }
