@@ -68,6 +68,31 @@ timeval_subtract (result, x, y)
   /* Return 1 if result is negative. */
   return x->tv_sec < y->tv_sec;
 }
+/*** Based on the implemenation above but for adding ***/
+int
+timeval_add (result, x, y)
+     struct timeval *result, *x, *y;
+{
+  /* Perform the carry for the later subtraction by updating y. */
+  if (x->tv_usec < y->tv_usec) {
+    int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+    y->tv_usec -= 1000000 * nsec;
+    y->tv_sec += nsec;
+  }
+  if (x->tv_usec - y->tv_usec > 1000000) {
+    int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+    y->tv_usec += 1000000 * nsec;
+    y->tv_sec -= nsec;
+  }
+
+  /* Compute the time remaining to wait.
+     tv_usec is certainly positive. */
+  result->tv_sec = x->tv_sec + y->tv_sec;
+  result->tv_usec = x->tv_usec + y->tv_usec;
+
+  /* Return 1 if result is negative. */
+  return x->tv_sec < y->tv_sec;
+}
 
 //add time node to list
 int add_to_list(struct timeval *d_time, int s_num);
@@ -158,7 +183,7 @@ printf("Elasped time in microseconds: %ld ms\n",
 
  struct timeval *inc_dtime3;
  inc_dtime3 = malloc(sizeof(struct timeval));
- 
+
  struct timeval *inc_dtime4;
  inc_dtime4 = malloc(sizeof(struct timeval));
 
@@ -183,11 +208,18 @@ printf("Elasped time in microseconds: %ld ms\n",
  add_to_list(inc_dtime4,5);
 
  print_list();
-/*
-printf("New List~~~~~~~\n");
-int removed = remove_from_list(5);
+
+printf("\n\n/**** Remove testing ****/\n\n");
+int removed = remove_from_list(3);
 printf("Seq_num removed is  : %d\n",removed);
-print_list();*/
+print_list();
+removed = remove_from_list(5);
+printf("\nSeq_num removed is  : %d\n",removed);
+print_list();
+removed = remove_from_list(1);
+printf("\nSeq_num removed is  : %d\n",removed);
+print_list();
+
 /*
 //update_timer(5);
 printf("5 seconds elapsed\n");
@@ -345,10 +377,16 @@ int add_to_list(struct timeval *d_time, int s_num){
     return -1;
 }
 
-/*Needs some work*/
-/*
+
+
 int remove_from_list(int s_num){
-	float currHeadTime; //holder used to calc new delta times.
+	struct timeval *cur_node_time;
+	struct timeval *upd_node_time;
+
+	cur_node_time = malloc(sizeof(struct timeval));
+	upd_node_time = malloc(sizeof(struct timeval));
+
+
 	int removed = -1;
 	if(head == NULL){
 		printf("Timer List is empty!");
@@ -358,11 +396,12 @@ int remove_from_list(int s_num){
 	cursor = head;
 	if(head -> seq_num == s_num){
 		removed = head -> seq_num;
-		currHeadTime = head -> delta_time;
-		head = head -> next;
-		head -> delta_time = currHeadTime + head -> delta_time;
+		cur_node_time = head -> delta_time;
+		cursor = head -> next;
+		timeval_add(upd_node_time,cur_node_time,cursor -> delta_time);
+		cursor -> delta_time = upd_node_time;
+		head = cursor;
 		head -> prev = NULL;
-
 
 		return removed;
 	}else{
@@ -378,9 +417,10 @@ int remove_from_list(int s_num){
 			//cursor -> prev -> next = NULL;
 		}else{
 			removed = cursor -> seq_num;
-			currHeadTime = cursor -> delta_time;
+			cur_node_time = cursor -> delta_time;
 			if(cursor -> next != NULL){
-				cursor -> next -> delta_time = cursor -> next -> delta_time + currHeadTime;
+				timeval_add(upd_node_time,cursor -> next -> delta_time, cur_node_time);
+				cursor -> next -> delta_time = upd_node_time;
 				cursor -> next -> prev = cursor ->prev;
 			}
 			cursor -> prev -> next = cursor -> next;
@@ -388,7 +428,7 @@ int remove_from_list(int s_num){
 
 	}
 	return removed;
-}*/
+}
 /*
 void update_timer(float elapsed_time){
 		float head_time = head -> delta_time;
