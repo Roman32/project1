@@ -180,15 +180,17 @@ int main(int argc, char argv[]){
 		if(FD_ISSET(sockOut,&portUp)){
 			int addr_len = sizeof(server);
 			bytes =recvfrom(sockOut,bufferOut,sizeof(bufferOut),0,(struct sockaddr*)&server,&addr_len);
-			memcpy(&pcktS.trollhdr,&bufferOut,16);
-			memcpy(&pcktS.tcpHdr,&bufferOut+16,20);
-			memcpy(&pcktS.tcpHdr,&bufferOut+36,bytes-36);
+			memcpy(&pcktS.trollhdr,bufferOut,16);
+			memcpy(&pcktS.tcpHdr,bufferOut+16,20);
+			memcpy(&pcktS.payload,bufferOut+36,bytes-36);
 			printf("Bytes recv from troll %d\n",bytes);
 			short check =checksum((char *)&pcktS+16,sizeof(struct tcphdr)+bytes);
-			if(check == pcktS.tcpHdr.check){
+			if(check == ntohs(pcktS.tcpHdr.check)){
 				printf("Checksum is same for packet %d\n",pcktS.tcpHdr.seq);
+				printf("Checksum rcvd is: %u\n",pcktS.tcpHdr.check);
+				printf("Checksum calculated is %u\n",check);
 			}else{
-				printf("Checksum is different for packet %d\n",pcktS.tcpHdr.seq);
+				printf("Checksum is different for packet %u\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %u\n",pcktS.tcpHdr.check);
 			}
 			bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
