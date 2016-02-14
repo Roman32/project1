@@ -75,7 +75,7 @@ int main(int argc, char argv[]){
 	int bytesToServ = 0;
 	int bytesToTroll = 0;
 	char buffer[MSS];
-	char bufferOut[1016];
+	char bufferOut[1036];
 	char buffS[MSS];
 	uint32_t seq_num = 0;
 	fd_set portUp;
@@ -172,7 +172,8 @@ int main(int argc, char argv[]){
 			printf("Bytes from client :%d\n",bytesIn);
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
-			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
+			printf("the checksum is %u\n",pckt.tcpHdr.check);
+			bytesToTroll = sendto(sockIn,(char *)&pckt,36+bytesIn,0,(struct sockaddr*)&troll,sizeof(troll));
 			printf("Sent to the Troll: %d\n",bytesToTroll);
 			
 		}
@@ -180,7 +181,7 @@ int main(int argc, char argv[]){
 			int addr_len = sizeof(server);
 			bytes =recvfrom(sockOut,bufferOut,sizeof(bufferOut),0,(struct sockaddr*)&server,&addr_len);
 			printf("Bytes recv from troll %d\n",bytes);
-			bytesToServ = sendto(sockOut,bufferOut+16,bytes-16,0,(struct sockaddr*)&final,sizeof(final));
+			bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 			printf("Bytes sent to server:%d\n",bytesToServ);
 		}
 		FD_ZERO(&portUp);
