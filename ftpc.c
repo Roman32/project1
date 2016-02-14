@@ -70,7 +70,7 @@ int main(int argc, char *argv[]){
 /*Function used to open file,read file, and to 
 send the file to the server*/
 void readAndSendFile(char *fname,int sock,int size){
-	char buffer[1000];
+	char buffer[MSS];
 	int bytesRead = 0;
 	int totalSent =0;
 	int nSize= htonl(size);
@@ -82,7 +82,7 @@ void readAndSendFile(char *fname,int sock,int size){
 		exit(1);
 	}
 	
-	memset(buffer,'\0',1000);
+	memset(buffer,'\0',MSS);
 	/*Sending the file name*/
 	memcpy(buffer,fname,20);
 	if(SEND(sock,buffer,20,0) < 0){
@@ -99,7 +99,7 @@ void readAndSendFile(char *fname,int sock,int size){
 		exit(1);
 	}else{
 		while((size-totalSent) > 0){			
-			bytesRead=fread(buffer,1,1000,fileName);
+			bytesRead=fread(buffer,1,MSS,fileName);
 			if(bytesRead < 0){
 				printf("Error, read nothing from file");
 				exit(1);

@@ -28,7 +28,7 @@ int main(int argc,char *argv[]){
 	socklen_t clientLen;
 	struct sockaddr_in server_addr;
 	struct sockaddr_in client_addr;
-	char buffer[1000];
+	char buffer[MSS];
 
 	if(argc != 2){
 		printf("ERROR, wrong number of arguments!\n");
@@ -63,8 +63,8 @@ void receiveFile(int sock){
 
 	int bytesIn = 0;
 	long fileSize =0;
-	char buffer[1000];
-	bzero(buffer,1000);
+	char buffer[MSS];
+	bzero(buffer,MSS);
 	int totalRecv = 0;
 	char fileIn[50] = "output/";
 	
@@ -78,7 +78,7 @@ void receiveFile(int sock){
 	memcpy(&fileSize,buffer,4);
 	fileSize = ntohl(fileSize);
 	printf("The size of the file is: %ld bytes.\n",fileSize);
-	bzero(buffer,1000);
+	bzero(buffer,MSS);
 	/*Recieves the file name in 20 bytes*/
 	bytesIn = RECV(sock,buffer,20,MSG_WAITALL);
 	printf("bytes in: %d\n",bytesIn);	
@@ -88,7 +88,7 @@ void receiveFile(int sock){
 	}
 	strcat(fileIn,buffer);
 	printf("The name of the outputfile will be %s.\n",fileIn);
-	bzero(buffer,1000);
+	bzero(buffer,MSS);
 	/*Open the file and start receiving bytes as long as the 
 	total received is less than the total size of the file
 	*/
@@ -100,13 +100,13 @@ void receiveFile(int sock){
 	/* The while condition could probably be written more elegantly,I was getting
 	1000 more bytes than what was really in the file*/	
 	while((fileSize-totalRecv) > 0){
-		bytesIn = RECV(sock,buffer,1000,0);
+		bytesIn = RECV(sock,buffer,MSS,0);
 		if(bytesIn < 0){
 			printf("Error reading from socket!");
 			exit(1);
 		}
 		fwrite(buffer,1,bytesIn,fname);
-		bzero(buffer,1000);	
+		bzero(buffer,MSS);	
 		totalRecv += bytesIn;
 		printf("Total rcv'd this far %d\n",totalRecv);
 	}
