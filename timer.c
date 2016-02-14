@@ -9,7 +9,7 @@
 #include "wrapper_funcs.h"
 #include "globals.h"
 #include <time.h>
-#define max_timer_msg_len 24 //1 byte for type, 4 bytes for seq num, how many for time?
+#define max_timer_msg_len 21 //1 byte for type, 4 bytes for seq num, how many for time?
 
 /*One way to implement the timer is as follows. The program wakes up periodically, determines
 the time elapsed since the last wake up and decrements the time value in the first node.
@@ -20,7 +20,7 @@ timer value in the first node. The select function call is useful for such purpo
 struct time_node{
 	struct timeval *delta_time;
 	//float delta_time;
-  int seq_num;
+  uint32_t seq_num;
 	struct time_node *next;
   struct time_node *prev;
 }time_node;
@@ -95,13 +95,13 @@ timeval_add (result, x, y)
 }
 
 //add time node to list
-int add_to_list(struct timeval *d_time, int s_num);
+int add_to_list(struct timeval *d_time, uint32_t s_num);
 //remove time node from list
-int remove_from_list(int s_num);
+int remove_from_list(uint32_t s_num);
 
 int print_list();
 //update head node in timeing list
-void update_timer(float elapsed_time);
+void update_timer(struct timeval *elapsed_time);
 
 //recieve info from timer_sockaddr
 int recv_from_tcpd();
@@ -124,7 +124,7 @@ int main(){
 	//for storing the result of curr_time - start_time
 	struct timeval result_time;
 /*Set up for timer_sockaddr Socket*/
-    /*
+
  tcpd_sock = socket(AF_INET,SOCK_DGRAM,0);
  if(tcpd_sock < 0) {
 	perror("error: opening datagram socket");
@@ -141,11 +141,11 @@ int main(){
  }
 
  printf("Timer waiting on port # %d\n", ntohs(timer_sockaddr.sin_port));
-*/
+
 
 int tv_sub_ret_val;
 int select_ret_val;
-
+/*
 //for testing only, watch stdin (fd 0) to see when it has input
 fd_set rfds;
 FD_ZERO(&rfds);
@@ -168,10 +168,11 @@ printf("Elasped time in microseconds: %ld ms\n",
 	((curr_time.tv_sec - start_time.tv_sec)*1000000L +
 		curr_time.tv_usec - start_time.tv_usec));
 
-
-
+*/
+recv_from_tcpd();
 
 /**** Unit testing section ****/
+/*
  struct timeval *inc_dtime;
  inc_dtime = malloc(sizeof(struct timeval));
 
@@ -208,8 +209,9 @@ printf("Elasped time in microseconds: %ld ms\n",
  add_to_list(inc_dtime4,5);
 
  print_list();
-
-printf("\n\n/**** Remove testing ****/\n\n");
+*/
+//printf("\n\n/**** Remove testing ****/\n\n");
+/*
 int removed = remove_from_list(3);
 printf("Seq_num removed is  : %d\n",removed);
 print_list();
@@ -220,13 +222,16 @@ removed = remove_from_list(1);
 printf("\nSeq_num removed is  : %d\n",removed);
 print_list();
 
-/*
-//update_timer(5);
+struct timeval *test_el_time;
+test_el_time = malloc(sizeof(struct timeval));
+test_el_time -> tv_sec = 5;
+test_el_time -> tv_usec = 0;
+update_timer(test_el_time);
 printf("5 seconds elapsed\n");
 print_list();
 //update_timer(26); //should make head be less than zero
-printf("26 seconds elapsed\n");
-print_list();*/
+//printf("26 seconds elapsed\n");
+//print_list();*/
 /**** End unit testing section ****/
 }
 
@@ -238,26 +243,27 @@ int buflen = max_timer_msg_len;
 char recv_buff[buflen];
 
 
-
-    	if(recvfrom(tcpd_sock, recv_buff, buflen, 0, (struct sockaddr *)&timer_sockaddr, &buflen) < 0) {
+         printf("waiting to receive\n");
+int res = recvfrom(tcpd_sock, recv_buff, buflen, 0, (struct sockaddr *)&timer_sockaddr, &buflen);
+printf("res is %d\n",res);
+    	if(res < 0) {
 
 		perror("error receiving in timer");
 		exit(4);
 
         }
+        printf( "buff0 is %d\n",(uint8_t)ntohs(recv_buff[0]));
         if(ntohs(recv_buff[0]) == 6){
 
-        	int seq_num = ntohs(recv_buff[5]);
-        	add_to_list(recv_buff[5],seq_num);
+        	uint32_t seq_num = ntohs(recv_buff[1]);
+        	add_to_list(&recv_buff[5],seq_num);
 
         }else if(ntohs(recv_buff[0]) == 7){
 
-        	int seq_num = ntohs(recv_buff[5]);
-        	//remove_from_list(seq_num);
+        	uint32_t seq_num = ntohs(recv_buff[1]);
+        	remove_from_list(seq_num);
 
         }
-
-
  return 1;
 }
 int print_list(){
@@ -274,7 +280,7 @@ int print_list(){
     return 0;
 }
 
-int add_to_list(struct timeval *d_time, int s_num){
+int add_to_list(struct timeval *d_time, uint32_t s_num){
     struct time_node *new_t_node_ptr = (struct time_node*)malloc(sizeof(struct time_node));
     struct time_node *prev_p  = head;
 
@@ -379,7 +385,7 @@ int add_to_list(struct timeval *d_time, int s_num){
 
 
 
-int remove_from_list(int s_num){
+int remove_from_list(uint32_t s_num){
 	struct timeval *cur_node_time;
 	struct timeval *upd_node_time;
 
@@ -429,14 +435,21 @@ int remove_from_list(int s_num){
 	}
 	return removed;
 }
-/*
-void update_timer(float elapsed_time){
-		float head_time = head -> delta_time;
-		float res = head_time - elapsed_time;
-		if(res <= 0){
+
+void update_timer(struct timeval *elapsed_time){
+		 struct timeval *head_time;
+		 struct timeval *upd_head_time;
+		 upd_head_time = malloc(sizeof(struct timeval));
+		 head_time = malloc(sizeof(struct timeval));
+
+		 head_time = head -> delta_time;
+		 int res = timeval_subtract(upd_head_time,head_time,elapsed_time);
+
+
+		if(res < 0){
 			head = head -> next;
 			head -> prev = NULL;
 		}else{
-			head -> delta_time = res;
+			head -> delta_time = upd_head_time;
 		}
-}*/
+}
