@@ -8,33 +8,44 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 #include "globals.h"
-
+/*
 typedef struct packet{
   uint8_t packet_type;
   uint32_t seq_num;
-  struct timeval t;
-}packet;
+  uint64_t tv_sec;
+  uint64_t tv_usec;
+  //struct timeval t; doesnt seem to be working so just sending times
+}packet;*/
 /* client program called with host name and port number of server */
 main(int argc, char *argv[])
 {
-    struct packet p;
+   /* struct packet *p;
+    p = malloc(21);*/
     int sock, buflen;
-    //prepare a packet for
+    /*prepare a packet for
     struct timeval *tval = malloc(sizeof(struct timeval));
     tval -> tv_sec = 30;
-    tval -> tv_usec = 0;
+    tval -> tv_usec = 0;*/
 
-    memcpy(&p.t,&tval,sizeof(tval));
-    p.seq_num = (uint32_t)1;
-    p.packet_type = (uint8_t)6;
+    int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
+	printf("buffsize is %d\n",buffSize);
 
-    int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(struct timeval);
     char *cli_buf = malloc(buffSize);
     bzero(cli_buf,buffSize);
 
+	uint8_t packet_type = 6;
+    uint32_t seq_num = htonl(1);
+    uint64_t tv_sec = htobe64(30);
+    uint64_t tv_usec = htobe64(0);
 
-    printf("p.seq is %d\n",p.seq_num);
-    memcpy(&p.t,&tval,sizeof(tval));
+	memcpy(cli_buf,&packet_type,1);
+	memcpy(cli_buf+1,&seq_num,4);
+	memcpy(cli_buf+5,&tv_sec,8);
+	memcpy(cli_buf+13,&tv_usec,8);
+
+
+
+
 
     struct sockaddr_in name;
     struct hostent *hp, *gethostbyname();
@@ -60,7 +71,7 @@ main(int argc, char *argv[])
 
     /* send message to server */
 
-    int res = sendto(sock, (char *)&p, (sizeof(p.t) + 5), 0, (struct sockaddr *)&name, sizeof(name));
+    int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
     printf("res is %d\n",res);
     if(res <0) {
 	perror("sending datagram message");

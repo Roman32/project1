@@ -16,6 +16,11 @@ the time elapsed since the last wake up and decrements the time value in the fir
 If it reduces to 0 or less, the timer has expired for the first node. The timer process must
 also receive further requests for timers while it is repeatedly waking up and reducing the
 timer value in the first node. The select function call is useful for such purposes.*/
+typedef struct packet{
+  uint8_t packet_type;
+  uint32_t seq_num;
+  struct timeval t;
+}packet;
 
 struct time_node{
 	struct timeval *delta_time;
@@ -170,7 +175,7 @@ printf("Elasped time in microseconds: %ld ms\n",
 
 */
 recv_from_tcpd();
-
+print_list();
 /**** Unit testing section ****/
 /*
  struct timeval *inc_dtime;
@@ -245,6 +250,7 @@ char recv_buff[buflen];
 
          printf("waiting to receive\n");
 int res = recvfrom(tcpd_sock, recv_buff, buflen, 0, (struct sockaddr *)&timer_sockaddr, &buflen);
+
 printf("res is %d\n",res);
     	if(res < 0) {
 
@@ -252,16 +258,36 @@ printf("res is %d\n",res);
 		exit(4);
 
         }
-        printf( "buff0 is %d\n",(uint8_t)ntohs(recv_buff[0]));
-        if(ntohs(recv_buff[0]) == 6){
+        //printf( "buff0 is %d\n",(uint8_t)ntohs(recv_buff[0]));
+        //printf("p.seq_num is %d\n",p.seq_num);
+        uint8_t inc_ptype;
+		uint32_t inc_seq_num;
+	    uint64_t inc_sec;
+		uint64_t inc_usec;
 
-        	uint32_t seq_num = ntohs(recv_buff[1]);
-        	add_to_list(&recv_buff[5],seq_num);
+        memcpy(&inc_ptype,recv_buff,1);
+		memcpy(&inc_seq_num,recv_buff+1,4);
+        memcpy(&inc_sec,recv_buff+5,8);
+		memcpy(&inc_usec,recv_buff+13,8);
+
+        printf("ptype is %d\n",inc_ptype);
+
+        if(inc_ptype == 6){
+
+
+			printf("here before add to ist in recv\n");
+			printf("seq num is %d\n",ntohl(inc_seq_num));
+
+			struct timeval *t;
+            t = malloc(sizeof(struct timeval));
+
+			t -> tv_sec = be64toh(inc_sec);
+            t -> tv_usec = be64toh(inc_usec);
+
+        	add_to_list(t,ntohl(inc_seq_num));
 
         }else if(ntohs(recv_buff[0]) == 7){
-
-        	uint32_t seq_num = ntohs(recv_buff[1]);
-        	remove_from_list(seq_num);
+        	remove_from_list(ntohl(inc_seq_num));
 
         }
  return 1;
