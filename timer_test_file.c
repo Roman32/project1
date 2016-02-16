@@ -78,7 +78,157 @@ main(int argc, char *argv[])
 	exit(4);
     }
 
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(2);
+    tv_sec = htobe64(35);
+    tv_usec = htobe64(0);
 
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(3);
+    tv_sec = htobe64(34);
+    tv_usec = htobe64(0);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(4);
+    tv_sec = htobe64(33);
+    tv_usec = htobe64(0);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+
+
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(5);
+    tv_sec = htobe64(38); //doesnt apply for cancel packets
+    tv_usec = htobe64(0);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+    sleep(3);
+
+    /**** Cancel test ****/
+    bzero(cli_buf,buffSize);
+    packet_type = 7;
+     seq_num = htonl(4);
+    tv_sec = htobe64(38);//doesnt apply for cancel packets
+    tv_usec = htobe64(0);//doesnt apply for cancel packets
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+     sleep(10);
+
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(10);
+    tv_sec = htobe64(40); //doesnt apply for cancel packets
+    tv_usec = htobe64(0);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(11);
+    tv_sec = htobe64(24); //doesnt apply for cancel packets
+    tv_usec = htobe64(0);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(12);
+    tv_sec = htobe64(39); //doesnt apply for cancel packets
+    tv_usec = htobe64(0);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
     /* close connection */
     close(sock);
     exit(0);
