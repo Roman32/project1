@@ -1,24 +1,22 @@
 README for ftps and ftpc programs.
 
-Author: Roman Claprood
-Project: Lab Client/Server programs to send
-	files(tested files were .jpg).
-Due Date: //
+Author: Brian Parks and Roman Claprood
+Project: TCP over UDP with Troll Checkpoint 1
+Due Date: 02/19/16
 
-To compile, use the command "make". Will make 3 executables: ftpc,ftps and tpcd.
+To compile, use the command "make". Will make 3 executables: ftpc,ftps,tcpd,timer and testT
 
-To run, the client (ftpc, tcpd and troll MUST be on Epsilon server!!
+To run, the client (ftpc, tcpd and troll MUST be on Epsilon machine!
 To run ftpc  is ./ftpc filename.
 to run tcpd is ./tcpd.
-To run troll is troll 6666 -s0 -x0
 
-To Run the server it must be on the BETA server!
+To run troll is troll 6666 -s0 -x0 -g25 -t
+
+To Run the server it must be on the BETA machine!
 to run ftps is ./ftps 9997
 to run tcpd is ./tcpd.
 
-ftpc will send file to the tcpd process, then the tcpd process will pass to troll (All on same machine).
-Troll then sends the packets to a tcpd process running on another machine, where it is finally passed to
-ftps.  File is then stored in output file.
-
-Currently working. Fix was to make buffer receiving from troll 1016 bytes. Then with sendto to the server make buffer
-buffer+16 and bytes -16.
+To run the timer and timer test, both need to be on the Epsilon machine!
+Start the timer first by typing time.
+Then start the test for timer with the comman testT.
+No parameters are needed for them.
