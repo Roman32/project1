@@ -4,8 +4,9 @@ CC = gcc
 OBJCLI = ftpc.c wrapper_funcs.c 
 OBJSRV = ftps.c wrapper_funcs.c
 OBJD = tcpd.c wrapper_funcs.c
-
-all: ftpc ftps tcpd 
+OBJTIME = timer.c
+OBJTTIME = timer_test_file.c
+all: ftpc ftps tcpd timer testT
 
 ftpc:	$(OBJCLI)
 	$(CC) -o $@ $(OBJCLI)
@@ -16,5 +17,11 @@ ftps:	$(OBJSRV)
 tcpd:	$(OBJD)
 	$(CC) -o $@ $(OBJD)
 	
+timer:	$(OBJTIME)
+	$(CC) -o $@ $(OBJTIME)
+
+testT:	$(OBJTTIME)
+	$(CC) -o $@ $(OBJTTIME)
+		
 clean:
-	rm ftpc ftps ftpd
+	rm ftpc ftps ftpd timer testT

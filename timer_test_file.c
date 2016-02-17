@@ -1,6 +1,7 @@
 /* Example: client.c sending and receiving datagrams using UDP */
 #include <netdb.h>
 #include <strings.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
