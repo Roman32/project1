@@ -10,7 +10,6 @@
 
 #include "globals.h"
 
-
 /* For Reference 20 bytes long
 struct tcphdr {
          __u16   source;
@@ -47,7 +46,7 @@ struct tcphdr {
          __u16   urg_ptr;
 };
 */
-
+#define POLY 0x8408
 struct sockaddr_in client;
 struct sockaddr_in server;
 struct sockaddr_in troll;
@@ -64,7 +63,7 @@ typedef struct Packet{
 	char payload[MSS];
 }Packet;
 
-unsigned short checksum(const char *buf, unsigned size);
+unsigned short checksum(char *data_p, int length);
 
 int main(int argc, char argv[]){
 	
@@ -76,7 +75,6 @@ int main(int argc, char argv[]){
 	int bytesToTroll = 0;
 	char buffer[MSS];
 	char bufferOut[1036];
-	char buffS[MSS];
 	uint32_t seq_num = 0;
 	fd_set portUp;
 	TrollHeader head;
@@ -150,7 +148,7 @@ int main(int argc, char argv[]){
         pcktS.tcpHdr.urg = 0;
         pcktS.tcpHdr.ece = 0;
         pcktS.tcpHdr.cwr = 0;
-	pcktS.tcpHdr.window = 0;
+	pcktS.tcpHdr.window = htons(MSS);
 	pcktS.tcpHdr.check = 0;
 	pcktS.tcpHdr.urg_ptr = 0;
 	
@@ -163,6 +161,7 @@ int main(int argc, char argv[]){
 			//perror("select");
 		}
 		if(FD_ISSET(sockIn,&portUp)){
+			pckt.tcpHdr.check = 0;
 			bzero(&buffer,sizeof(buffer));
 			int addr_len =sizeof(client);
 			bytesIn = recvfrom(sockIn,buffer,sizeof(buffer),0,(struct sockaddr *)&client,&addr_len);
@@ -172,24 +171,33 @@ int main(int argc, char argv[]){
 			printf("Bytes from client :%d\n",bytesIn);
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
-			printf("The checksum for packet %d being sent is: %u\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
+			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			printf("Sent to the Troll: %d\n",bytesToTroll);
+			sleep(1);
 			
 		}
 		if(FD_ISSET(sockOut,&portUp)){
+			bzero(&bufferOut,sizeof(bufferOut));
+			
 			int addr_len = sizeof(server);
 			bytes =recvfrom(sockOut,bufferOut,sizeof(bufferOut),0,(struct sockaddr*)&server,&addr_len);
-			memcpy(&pcktS.trollhdr,&bufferOut,16);
-			memcpy(&pcktS.tcpHdr,&bufferOut+16,20);
-			memcpy(&pcktS.tcpHdr,&bufferOut+36,bytes-36);
+			memcpy(&pcktS.trollhdr,bufferOut,sizeof(struct TrollHeader));
+			memcpy(&pcktS.tcpHdr,bufferOut+16,sizeof(struct tcphdr));
+			memcpy(&pcktS.payload,bufferOut+36,bytes-36);
 			printf("Bytes recv from troll %d\n",bytes);
-			short check =checksum((char *)&pcktS+16,sizeof(struct tcphdr)+bytes);
-			if(check == pcktS.tcpHdr.check){
-				printf("Checksum is same for packet %d\n",pcktS.tcpHdr.seq);
+			uint16_t checkRecv = pcktS.tcpHdr.check;
+			printf("Check recvd %hu\n",checkRecv);
+			pcktS.tcpHdr.check = 0;
+			uint16_t check = checksum((char *)&pcktS+16,sizeof(struct tcphdr)+bytes-36);
+			if(check == checkRecv){
+				printf("Checksum is *****SAME***** for packet %d\n",pcktS.tcpHdr.seq);
+				printf("Checksum rcvd is: %hu\n",checkRecv);
+				printf("Checksum calculated is %hu\n",check);
 			}else{
-				printf("Checksum is different for packet %d\n",pcktS.tcpHdr.seq);
-				printf("Checksum rcvd is: %u\n",pcktS.tcpHdr.check);
+				printf("Checksum is **********DIFFERENT********** for packet %u\n",pcktS.tcpHdr.seq);
+				printf("Checksum rcvd is: %hu\n",checkRecv);
+				printf("Checksum calculated is %hu\n",check);
 			}
 			bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 			printf("Bytes sent to server:%d\n",bytesToServ);
@@ -203,60 +211,38 @@ int main(int argc, char argv[]){
 }
 
 /*
-used from site http://locklessinc.com/articles/tcp_checksum/
-This version of the algorthim gave a better time performance
- */
-unsigned short checksum(const char *buf, unsigned size)
+//                                      16   12   5
+// this is the CCITT CRC 16 polynomial X  + X  + X  + 1.
+// This works out to be 0x1021, but the way the algorithm works
+// lets us use 0x8408 (the reverse of the bit pattern).  The high
+// bit is always assumed to be set, thus we only use 16 bits to
+// represent the 17 bit value.
+*/
+
+unsigned short checksum(char *data_p, int length)
 {
-	unsigned long long sum = 0;
-	const unsigned long long *b = (unsigned long long *) buf;
+      unsigned char i;
+      unsigned int data;
+      unsigned int crc = 0xffff;
 
-	unsigned t1, t2;
-	unsigned short t3, t4;
+      if (length == 0)
+            return (~crc);
 
-	/* Main loop - 8 bytes at a time */
-	while (size >= sizeof(unsigned long long))
-	{
-		unsigned long long s = *b++;
-		sum += s;
-		if (sum < s) sum++;
-		size -= 8;
-	}
+      do
+      {
+            for (i=0, data=(unsigned int)0xff & *data_p++;
+                 i < 8; 
+                 i++, data >>= 1)
+            {
+                  if ((crc & 0x0001) ^ (data & 0x0001))
+                        crc = (crc >> 1) ^ POLY;
+                  else  crc >>= 1;
+            }
+      } while (--length);
 
-	/* Handle tail less than 8-bytes long */
-	buf = (const char *) b;
-	if (size & 4)
-	{
-		unsigned s = *(unsigned *)buf;
-		sum += s;
-		if (sum < s) sum++;
-		buf += 4;
-	}
+      crc = ~crc;
+      data = crc;
+      crc = (crc << 8) | (data >> 8 & 0xff);
 
-	if (size & 2)
-	{
-		unsigned short s = *(unsigned short *) buf;
-		sum += s;
-		if (sum < s) sum++;
-		buf += 2;
-	}
-
-	if (size)
-	{
-		unsigned char s = *(unsigned char *) buf;
-		sum += s;
-		if (sum < s) sum++;
-	}
-
-	/* Fold down to 16 bits */
-	t1 = sum;
-	t2 = sum >> 32;
-	t1 += t2;
-	if (t1 < t2) t1++;
-	t3 = t1;
-	t4 = t1 >> 16;
-	t3 += t4;
-	if (t3 < t4) t3++;
-
-	return ~t3;
+      return (crc);
 }
