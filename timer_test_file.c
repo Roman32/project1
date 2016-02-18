@@ -1,7 +1,6 @@
 /* Example: client.c sending and receiving datagrams using UDP */
 #include <netdb.h>
 #include <strings.h>
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -155,7 +154,7 @@ main(int argc, char *argv[])
     exit(4);
     }
 
-    sleep(3);
+    sleep(1);
 
     /**** Cancel test ****/
     bzero(cli_buf,buffSize);
@@ -175,7 +174,7 @@ main(int argc, char *argv[])
     perror("sending datagram message");
     exit(4);
     }
-     sleep(10);
+     sleep(1);
 
     bzero(cli_buf,buffSize);
     packet_type = 6;
@@ -198,8 +197,8 @@ main(int argc, char *argv[])
     bzero(cli_buf,buffSize);
     packet_type = 6;
      seq_num = htonl(11);
-    tv_sec = htobe64(24); //doesnt apply for cancel packets
-    tv_usec = htobe64(0);
+    tv_sec = htobe64(8); //doesnt apply for cancel packets
+    tv_usec = htobe64(500000);
 
     memcpy(cli_buf,&packet_type,1);
     memcpy(cli_buf+1,&seq_num,4);
@@ -218,6 +217,116 @@ main(int argc, char *argv[])
      seq_num = htonl(12);
     tv_sec = htobe64(39); //doesnt apply for cancel packets
     tv_usec = htobe64(0);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+	bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(13);
+    tv_sec = htobe64(6); //doesnt apply for cancel packets
+    tv_usec = htobe64(600);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+    sleep(5);
+	 /**** Cancel test ****/
+    bzero(cli_buf,buffSize);
+    packet_type = 7;
+     seq_num = htonl(13);
+    tv_sec = htobe64(38);//doesnt apply for cancel packets
+    tv_usec = htobe64(0);//doesnt apply for cancel packets
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+    sleep(2);
+   /**** Cancel test ****/
+    bzero(cli_buf,buffSize);
+    packet_type = 7;
+     seq_num = htonl(10);
+    tv_sec = htobe64(38);//doesnt apply for cancel packets
+    tv_usec = htobe64(0);//doesnt apply for cancel packets
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+    sleep(40);
+bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(14);
+    tv_sec = htobe64(0); //doesnt apply for cancel packets
+    tv_usec = htobe64(6000);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(15);
+    tv_sec = htobe64(0); //doesnt apply for cancel packets
+    tv_usec = htobe64(9000);
+
+    memcpy(cli_buf,&packet_type,1);
+    memcpy(cli_buf+1,&seq_num,4);
+    memcpy(cli_buf+5,&tv_sec,8);
+    memcpy(cli_buf+13,&tv_usec,8);
+
+     res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    printf("res is %d\n",res);
+    if(res <0) {
+    perror("sending datagram message");
+    exit(4);
+    }
+
+    bzero(cli_buf,buffSize);
+    packet_type = 6;
+     seq_num = htonl(16);
+    tv_sec = htobe64(0); //doesnt apply for cancel packets
+    tv_usec = htobe64(7000);
 
     memcpy(cli_buf,&packet_type,1);
     memcpy(cli_buf+1,&seq_num,4);
