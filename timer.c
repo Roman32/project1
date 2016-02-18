@@ -57,39 +57,40 @@ struct timeval *result, *x, *y;
 	if(y == NULL){printf("sub y was null\n");}
 	if(result == NULL){printf("sub res was null\n");}
 	//printf("in substract\n");
-	int x_sec2usec = x -> tv_sec * 1000000;
-	int y_sec2usec = y -> tv_sec * 1000000;
+	long x_sec2usec = x -> tv_sec * 1000000;
+	long y_sec2usec = y -> tv_sec * 1000000;
 	//printf("in substract 2\n");
-	int x_t_usec = x_sec2usec + x -> tv_usec;
-	int y_t_usec = y_sec2usec + y -> tv_usec;
-	int res_t = x_t_usec - y_t_usec;
+	long x_t_usec = x_sec2usec + x -> tv_usec;
+	long y_t_usec = y_sec2usec + y -> tv_usec;
+	long res_t = x_t_usec - y_t_usec;
 	result -> tv_sec = res_t / 1000000;
 	result -> tv_usec = res_t % 1000000;
 
 
 
   /* Return 1 if result is negative. */
-  return x->tv_sec <= y->tv_sec; //changed from < to <= to check if 0 seconds are left
+  return res_t <= 0; //changed from < to <= to check if 0 seconds are left
 }
 /*** Based on the implemenation above but for adding ***/
 int
 timeval_add (result, x, y)
 struct timeval *result, *x, *y;
 {
-
+    printf("in add, x -> tv_sec: %ld x -> tv_usec: %ld\n",x -> tv_sec, x -> tv_usec);
+	printf("in add, y -> tv_sec: %ld y -> tv_usec: %ld\n",y -> tv_sec, y -> tv_usec);
   	if(x == NULL){printf("add x was null\n");}
 	if(y == NULL){printf("add y was null\n");}
 	if(result == NULL){printf("add res was null\n");}
 	//printf("in add\n");
-	int x_sec2usec = x -> tv_sec * 1000000;
-	int y_sec2usec = y -> tv_sec * 1000000;
+	long x_sec2usec = x -> tv_sec * 1000000;
+	long y_sec2usec = y -> tv_sec * 1000000;
 	//printf("in add 2\n");
-	int x_t_usec = x_sec2usec + x -> tv_usec;
-	int y_t_usec = y_sec2usec + y -> tv_usec;
-	int res_t = x_t_usec + y_t_usec;
+	long x_t_usec = x_sec2usec + x -> tv_usec;
+	long y_t_usec = y_sec2usec + y -> tv_usec;
+	long res_t = x_t_usec + y_t_usec;
 	result -> tv_sec = res_t / 1000000;
 	result -> tv_usec = res_t % 1000000;
-
+    printf("in add, res -> tv_sec: %ld res -> tv_usec: %ld\n",result -> tv_sec, result-> tv_usec);
   return x->tv_sec < y->tv_sec;
 }
 
@@ -131,6 +132,8 @@ int recv_from_tcpd();
 //let timer_sockaddr know that something timed out
 int alert_tcpd();
 
+//returns 1 if seq_num is present in list, -1 otherwise
+int seq_is_present(uint32_t s_num);
 
 
 
@@ -186,36 +189,44 @@ int main(){
     timer.tv_usec = head -> delta_time -> tv_usec;
   }*/
     if(head != NULL){
+
      long x = 1;
      long y = 0;
+     //we are going to set the timeout the time of the head node
      x = head -> delta_time -> tv_sec;
      y = head -> delta_time -> tv_usec;
+     //if in some cases, the usec is negative as a result from a previous subtract
+	 //select will throw an error so do some checks before setting the timeout
 	 if(y < 0){y = 0;}
      if(x < 0){x = 0;}
      if(x == 0 && y == 0){x = 1;}
      timer.tv_sec = x;
      timer.tv_usec = y;
+	 printf("waiting for %ld sec %ld usec\n",timer.tv_sec,timer.tv_usec);
 
 	}else{
+		//if there is nothing in the list
 		timer.tv_sec = 1;
 		timer.tv_usec = 0;
 	}
-
+    //get the start time before select
     gettimeofday(&start_time,NULL);
     select_ret_val = select(FD_SETSIZE,&portUp,NULL,NULL,&timer);
-    gettimeofday(&curr_time,NULL);
+    gettimeofday(&curr_time,NULL); //now get the time after select returns
 
-    if(select_ret_val == -1){
+    if(select_ret_val == -1){ //select has an error
     	perror("select()");
     }else if(select_ret_val){
     	printf("Packet incoming.\n");
-		    //we want to update timer values before inserting/deleting
+		    //we want to update timer values before inserting/deleting if list != empty
 	    if(head != NULL){
 		    struct timeval *test_el_time;
 		    test_el_time = malloc(sizeof(struct timeval));
 		    test_el_time -> tv_usec = 0;
 			test_el_time -> tv_sec = 0;
-
+		    /* note that this will include the time that it takes to loop
+				to iterate. So when viewing output, there will be a few microseconds between
+				inserting into the list */
 		    timeval_subtract(test_el_time,&curr_time,&start_time);
 
 		    //printf("waiting for %ld sec %ld usec\n",test_el_time->tv_sec,test_el_time->tv_usec);
@@ -224,7 +235,7 @@ int main(){
     	recv_from_tcpd();
     	print_list();
     }else{
-
+      //there was no packet received during before timeout period, no we update the list
       if(head != NULL){
         struct timeval *test_el_time;
         test_el_time = malloc(sizeof(struct timeval));
@@ -233,7 +244,7 @@ int main(){
 
         timeval_subtract(test_el_time,&curr_time,&start_time);
 
-        //printf("waiting for %ld sec %ld usec\n",test_el_time->tv_sec,test_el_time->tv_usec);
+
         update_timer(test_el_time);
         print_list();
       }
@@ -243,70 +254,9 @@ int main(){
     FD_SET(tcpd_sock,&portUp);
 
   }
-
-
-/**** Unit testing section ****/
-/*
- struct timeval *inc_dtime;
- inc_dtime = malloc(sizeof(struct timeval));
-
- struct timeval *inc_dtime1;
- inc_dtime1 = malloc(sizeof(struct timeval));
-
- struct timeval *inc_dtime2;
- inc_dtime2 = malloc(sizeof(struct timeval));
-
- struct timeval *inc_dtime3;
- inc_dtime3 = malloc(sizeof(struct timeval));
-
- struct timeval *inc_dtime4;
- inc_dtime4 = malloc(sizeof(struct timeval));
-
- inc_dtime -> tv_sec = 30;
- inc_dtime -> tv_usec = 0;
- add_to_list(inc_dtime,1);
-
- inc_dtime1 -> tv_sec = 34;
- inc_dtime1 -> tv_usec = 0;
- add_to_list(inc_dtime1,2);
-
- inc_dtime2 -> tv_sec = 35;
- inc_dtime2 -> tv_usec = 0;
- add_to_list(inc_dtime2,3);
-
- inc_dtime3 -> tv_sec = 36;
- inc_dtime3 -> tv_usec = 0;
- add_to_list(inc_dtime3,4);
-
- inc_dtime4 -> tv_sec = 38;
- inc_dtime4 -> tv_usec = 0;
- add_to_list(inc_dtime4,5);
-
- print_list();
-*/
-//printf("\n\n/**** Remove testing ****/\n\n");
-/*
-int removed = remove_from_list(3);
-printf("Seq_num removed is  : %d\n",removed);
-print_list();
-removed = remove_from_list(5);
-printf("\nSeq_num removed is  : %d\n",removed);
-print_list();
-removed = remove_from_list(1);
-printf("\nSeq_num removed is  : %d\n",removed);
-print_list();
-
-struct timeval *test_el_time;
-test_el_time = malloc(sizeof(struct timeval));
-test_el_time -> tv_sec = 5;
-test_el_time -> tv_usec = 0;
-update_timer(test_el_time);
-printf("5 seconds elapsed\n");
-print_list();
-//update_timer(26); //should make head be less than zero
-//printf("26 seconds elapsed\n");
-//print_list();*/
-/**** End unit testing section ****/
+close(tcpd_sock);
+free(head);
+free(cursor);
 return;
 }
 
@@ -343,6 +293,7 @@ int recv_from_tcpd(){
 
   if(inc_ptype == 6){
 
+   if(seq_is_present(ntohl(inc_seq_num)) == 1){printf("error: seq num is present already\n"); return -1;}
 
    printf("Packet type 6 received, adding packet seq_num %d to delta list\n",ntohl(inc_seq_num));
    //printf("usec was %ld\n",be64toh(inc_usec));
@@ -359,7 +310,6 @@ int recv_from_tcpd(){
    printf("Packet type 7 received, removing seq num %d from  delta list.\n",ntohl(inc_seq_num));
    remove_from_list(ntohl(inc_seq_num));
    }
-
 
 return 1;
 }
@@ -399,7 +349,7 @@ int add_to_list(struct timeval *d_time, uint32_t s_num){
       new_t_node_ptr -> next = head;
       new_t_node_ptr -> prev = NULL;
 
-                //get the updated timval struct using function (x - y)
+      //get the updated timval struct using function (x - y)
       timeval_subtract (head -> delta_time, head -> delta_time, d_time);
 
       head -> prev = new_t_node_ptr;
@@ -412,8 +362,6 @@ int add_to_list(struct timeval *d_time, uint32_t s_num){
 
 
      timeval_subtract (d_time, d_time, cursor -> delta_time);
-
-                //printf("res at apple is %d\n",d_time -> tv_sec);
      cursor = cursor -> next;
      prev_p = cursor;
 
@@ -432,8 +380,8 @@ int add_to_list(struct timeval *d_time, uint32_t s_num){
           new_t_node_ptr -> next = NULL;
           new_t_node_ptr -> prev = prev_p;
           new_t_node_ptr -> delta_time = d_time;
-    			//here we are at the end of the list, no need
-    			//to update the remaining list (there is nothing remaining)
+		//here we are at the end of the list, no need
+		//to update the remaining list (there is nothing remaining)
 
         }else{
           cursor -> prev -> next = new_t_node_ptr;
@@ -441,8 +389,8 @@ int add_to_list(struct timeval *d_time, uint32_t s_num){
           cursor -> prev = new_t_node_ptr;
           new_t_node_ptr -> next = cursor;
           new_t_node_ptr -> delta_time = d_time;
-    			//now we need to update the next item
-    			//since we insterted into the middle of the list
+			//now we need to update the next item
+			//since we insterted into the middle of the list
           timeval_subtract (upd_node_time,new_t_node_ptr -> next -> delta_time,new_t_node_ptr -> delta_time);
           new_t_node_ptr -> next -> delta_time = upd_node_time;
         }
@@ -452,21 +400,21 @@ int add_to_list(struct timeval *d_time, uint32_t s_num){
             new_t_node_ptr -> next = NULL;
             new_t_node_ptr -> delta_time = d_time;
             new_t_node_ptr -> prev = head;
-    				//new node is second in the list and nothing comes after
-    				//so no need to update the remaining list since there is
-    				//none
+			//new node is second in the list and nothing comes after
+			//so no need to update
+			//none
           }
 
 
 
       }
   }else{
-       // printf("yes\n");
+
     new_t_node_ptr -> delta_time = d_time;
     new_t_node_ptr -> next = NULL;
     new_t_node_ptr -> prev = NULL;
     head = new_t_node_ptr;
-        //no need to update times since only one element in list
+    //no need to update times since only one element in list
   }
   return -1;
   }
@@ -550,3 +498,82 @@ int add_to_list(struct timeval *d_time, uint32_t s_num){
        head -> delta_time = upd_head_time;
      }
    }
+
+
+
+int seq_is_present(uint32_t s_num){
+	int found_flag = -1;
+  if(head == NULL){
+    printf("head is null\n");
+    return -1;
+  }
+  cursor = head;
+  while(cursor != NULL){
+    if(cursor -> seq_num == s_num){found_flag = 1;}
+    cursor = cursor -> next;
+  }
+
+  return found_flag;
+}
+/**** Unit testing section ****/
+/*
+ struct timeval *inc_dtime;
+ inc_dtime = malloc(sizeof(struct timeval));
+
+ struct timeval *inc_dtime1;
+ inc_dtime1 = malloc(sizeof(struct timeval));
+
+ struct timeval *inc_dtime2;
+ inc_dtime2 = malloc(sizeof(struct timeval));
+
+ struct timeval *inc_dtime3;
+ inc_dtime3 = malloc(sizeof(struct timeval));
+
+ struct timeval *inc_dtime4;
+ inc_dtime4 = malloc(sizeof(struct timeval));
+
+ inc_dtime -> tv_sec = 30;
+ inc_dtime -> tv_usec = 0;
+ add_to_list(inc_dtime,1);
+
+ inc_dtime1 -> tv_sec = 34;
+ inc_dtime1 -> tv_usec = 0;
+ add_to_list(inc_dtime1,2);
+
+ inc_dtime2 -> tv_sec = 35;
+ inc_dtime2 -> tv_usec = 0;
+ add_to_list(inc_dtime2,3);
+
+ inc_dtime3 -> tv_sec = 36;
+ inc_dtime3 -> tv_usec = 0;
+ add_to_list(inc_dtime3,4);
+
+ inc_dtime4 -> tv_sec = 38;
+ inc_dtime4 -> tv_usec = 0;
+ add_to_list(inc_dtime4,5);
+
+ print_list();
+*/
+//printf("\n\n/**** Remove testing ****/\n\n");
+/*
+int removed = remove_from_list(3);
+printf("Seq_num removed is  : %d\n",removed);
+print_list();
+removed = remove_from_list(5);
+printf("\nSeq_num removed is  : %d\n",removed);
+print_list();
+removed = remove_from_list(1);
+printf("\nSeq_num removed is  : %d\n",removed);
+print_list();
+
+struct timeval *test_el_time;
+test_el_time = malloc(sizeof(struct timeval));
+test_el_time -> tv_sec = 5;
+test_el_time -> tv_usec = 0;
+update_timer(test_el_time);
+printf("5 seconds elapsed\n");
+print_list();
+//update_timer(26); //should make head be less than zero
+//printf("26 seconds elapsed\n");
+//print_list();*/
+/**** End unit testing section ****/
