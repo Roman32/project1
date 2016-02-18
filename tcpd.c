@@ -211,6 +211,8 @@ int main(int argc, char argv[]){
 }
 
 /*
+// Taken from stjarnhimlen.se/snippets/ Look at similiar CRC16
+// implementations, but this one was cleaner.
 //                                      16   12   5
 // this is the CCITT CRC 16 polynomial X  + X  + X  + 1.
 // This works out to be 0x1021, but the way the algorithm works
@@ -223,7 +225,7 @@ unsigned short checksum(char *data_p, int length)
 {
       unsigned char i;
       unsigned int data;
-      unsigned int crc = 0xffff;
+      unsigned int crc = 0xffff; //16 bits, all 1s
 
       if (length == 0)
             return (~crc);
@@ -235,14 +237,14 @@ unsigned short checksum(char *data_p, int length)
                  i++, data >>= 1)
             {
                   if ((crc & 0x0001) ^ (data & 0x0001))
-                        crc = (crc >> 1) ^ POLY;
+                        crc = (crc >> 1) ^ POLY; //Shifting bits left by 1, and XORing with 0x8408.
                   else  crc >>= 1;
             }
       } while (--length);
 
-      crc = ~crc;
+      crc = ~crc;//flips bits
       data = crc;
-      crc = (crc << 8) | (data >> 8 & 0xff);
+      crc = (crc << 8) | (data >> 8 & 0xff);//crc shifted 8 bits to the left OR'd with data shifted 8 to right AND'd with 255 or 11111111
 
       return (crc);
 }
