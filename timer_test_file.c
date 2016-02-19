@@ -30,8 +30,8 @@ int sock,
 struct sockaddr_in name){
 
 	int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
-	printf("buffsize is %d\n",buffSize);
-
+	//printf("buffsize is %d\n",buffSize);
+	printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
 	char *cli_buf = malloc(buffSize);
     bzero(cli_buf,buffSize);
 
@@ -43,9 +43,9 @@ struct sockaddr_in name){
 	memcpy(cli_buf+1,&seq_num,4);
 	memcpy(cli_buf+5,&tv_sec,8);
 	memcpy(cli_buf+13,&tv_usec,8);
-
+    
 	int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
-    printf("res is %d\n",res);
+    //printf("res is %d\n",res);
     if(res <0) {
 	perror("sending datagram message");
 	exit(4);
@@ -111,41 +111,22 @@ main(int argc, char *argv[])
 	perror("sending datagram message");
 	exit(4);
     }*/
+	
 
-    send_packet(6, 1, 30, 0,sock,name);
+    send_packet(6, 1, 20, 0,sock,name);
+    send_packet(6, 2, 10, 0,sock,name);
     //pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 2, 35, 0,sock,name);
-
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 3, 31, 0,sock,name);
-
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 4, 29, 0,sock,name);
-
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 5, 28, 0,sock,name);
-
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 6, 28, 50000,sock,name);
-
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 7, 26, 0,sock,name);
-
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 8, 41, 0,sock,name);
-
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 9, 44, 0,sock,name);
-
-	sleep(1);
-	send_packet(7,7,12,12,sock,name);
-	//pckt_type, seq_num, tv_sec, tv_usec
-    send_packet(6, 10, 8, 0,sock,name);
+    send_packet(6, 3, 30, 0,sock,name);
 	sleep(5);
-send_packet(6, 11, 1, 50000,sock,name);
-send_packet(6, 12, 0, 90000,sock,name);
-send_packet(6, 13, 3, 25000,sock,name);
-send_packet(6, 14, 0, 10000,sock,name);
+    send_packet(7,2,0,0,sock,name);
+	//pckt_type, seq_num, tv_sec, tv_usec
+    send_packet(6,4,20, 0,sock,name);
+	sleep(5);
+	//pckt_type, seq_num, tv_sec, tv_usec
+    send_packet(6, 5, 18, 0,sock,name);
+	
+	send_packet(7,4,0,0,sock,name);
+	send_packet(7,8,0,0,sock,name);
 
     /*
     bzero(cli_buf,buffSize);
