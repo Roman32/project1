@@ -76,8 +76,8 @@ int
 timeval_add (result, x, y)
 struct timeval *result, *x, *y;
 {
-    printf("in add, x -> tv_sec: %ld x -> tv_usec: %ld\n",x -> tv_sec, x -> tv_usec);
-	printf("in add, y -> tv_sec: %ld y -> tv_usec: %ld\n",y -> tv_sec, y -> tv_usec);
+    //printf("in add, x -> tv_sec: %ld x -> tv_usec: %ld\n",x -> tv_sec, x -> tv_usec);
+	//printf("in add, y -> tv_sec: %ld y -> tv_usec: %ld\n",y -> tv_sec, y -> tv_usec);
   	if(x == NULL){printf("add x was null\n");}
 	if(y == NULL){printf("add y was null\n");}
 	if(result == NULL){printf("add res was null\n");}
@@ -90,7 +90,7 @@ struct timeval *result, *x, *y;
 	long res_t = x_t_usec + y_t_usec;
 	result -> tv_sec = res_t / 1000000;
 	result -> tv_usec = res_t % 1000000;
-    printf("in add, res -> tv_sec: %ld res -> tv_usec: %ld\n",result -> tv_sec, result-> tv_usec);
+    //printf("in add, res -> tv_sec: %ld res -> tv_usec: %ld\n",result -> tv_sec, result-> tv_usec);
   return x->tv_sec < y->tv_sec;
 }
 
@@ -307,6 +307,7 @@ int recv_from_tcpd(){
    add_to_list(t,ntohl(inc_seq_num));
 
   }else if(inc_ptype == 7){
+   if(seq_is_present(ntohl(inc_seq_num)) != 1){printf("error: seq num not present\n"); return -1;}
    printf("Packet type 7 received, removing seq num %d from  delta list.\n",ntohl(inc_seq_num));
    remove_from_list(ntohl(inc_seq_num));
    }
@@ -317,7 +318,8 @@ return 1;
 int print_list(){
   printf("\n******* NODE LIST *******\n");
   if(head == NULL){
-    printf("head is null\n");
+    printf("List is empty\n");
+	printf("*******    END    *******\n");
     return -1;
   }
   cursor = head;
