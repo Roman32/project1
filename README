@@ -20,3 +20,38 @@ To run the timer and timer test, both need to be on the Epsilon machine!
 Start the timer first by typing time.
 Then start the test for timer with the comman testT.
 No parameters are needed for them.
+
+
+Timer.c 
+	Accepts a packet with the following information: Packet Type (1 byte), 
+	Sequence Number (4 bytes), 64bit time value (seconds), 64bit time value (microseconds). 
+	Once the packet is received, a timer node will be created with the incoming time out values. 
+	Once the time specified in the packet has elasped, timer.c sends a packet back to TCPD indicating that
+	a packet has timed out. Timer.c also accepts packets for canceling time nodes. When a packet of this type
+	is received, the time node is removed from timer.c's internal data structure. 
+
+timer_test_file.c 
+	Sends packets with the information described above. 
+	
+tcpd.c
+	Essentially same file from the previous lab. Now contains the CRC16 implementation for the checksum.
+	Also has the troll header(16 bytes) as well as the tcp header( which is 20 bytes).  Each packet recv'd
+	from the client has both headers added, then is sent to troll. On server side of tcpd, the troll header
+	is stripped off, checksum value is stored, then zeroed out. The checksum is then calculated again and 
+	compared to see if packet was garbled.
+	
+ftpc.c
+	No change in code, just used to send data.
+	
+globals.h
+	Contains global variables for port numbers
+	
+wrapper_funcs.h
+	Headers for wrapper functions
+	
+wrapper_funcs.c
+	Same implentations for wrapper functions as previous lab
+	
+Makefile
+	run make to compile code and create executables
+	
