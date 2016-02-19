@@ -178,18 +178,17 @@ int main(int argc, char argv[]){
 			
 		}
 		if(FD_ISSET(sockOut,&portUp)){
-			bzero(&bufferOut,sizeof(bufferOut));
-			
+			bzero(&bufferOut,sizeof(bufferOut));			
 			int addr_len = sizeof(server);
 			bytes =recvfrom(sockOut,bufferOut,sizeof(bufferOut),0,(struct sockaddr*)&server,&addr_len);
-			memcpy(&pcktS.trollhdr,bufferOut,sizeof(struct TrollHeader));
-			memcpy(&pcktS.tcpHdr,bufferOut+16,sizeof(struct tcphdr));
-			memcpy(&pcktS.payload,bufferOut+36,bytes-36);
+			memcpy(&pcktS.trollhdr,bufferOut,sizeof(struct TrollHeader)); //Copy troll header to recieved packet troll header, not really needed.
+			memcpy(&pcktS.tcpHdr,bufferOut+16,sizeof(struct tcphdr)); //copy tcpHdr
+			memcpy(&pcktS.payload,bufferOut+36,bytes-36); //copy of the payload
 			printf("Bytes recv from troll %d\n",bytes);
-			uint16_t checkRecv = pcktS.tcpHdr.check;
+			uint16_t checkRecv = pcktS.tcpHdr.check; //set recved checksum value to a temp value
 			printf("Check recvd %hu\n",checkRecv);
-			pcktS.tcpHdr.check = 0;
-			uint16_t check = checksum((char *)&pcktS+16,sizeof(struct tcphdr)+bytes-36);
+			pcktS.tcpHdr.check = 0; //zero out checksum
+			uint16_t check = checksum((char *)&pcktS+16,sizeof(struct tcphdr)+bytes-36); //recompute checksum to see if packet was garbled.
 			if(check == checkRecv){
 				printf("Checksum is *****SAME***** for packet %d\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %hu\n",checkRecv);
@@ -234,11 +233,11 @@ unsigned short checksum(char *data_p, int length)
       {
             for (i=0, data=(unsigned int)0xff & *data_p++;
                  i < 8; 
-                 i++, data >>= 1)
+                 i++, data >>= 1) //Iterting over the bits of the data to be checksummed.
             {
-                  if ((crc & 0x0001) ^ (data & 0x0001))
+                  if ((crc & 0x0001) ^ (data & 0x0001)) //checks if the bits differ
                         crc = (crc >> 1) ^ POLY; //Shifting bits left by 1, and XORing with 0x8408.
-                  else  crc >>= 1;
+                  else  crc >>= 1;  
             }
       } while (--length);
 
