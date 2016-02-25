@@ -49,3 +49,8 @@ ssize_t RECV(int socket,const void *buffer,size_t length,int flags){
 	leng = sizeof(sock_addr);
 	return recvfrom(socket,(char *)buffer,length,flags,(struct sockaddr*)&sock_addr,&leng);
 }
+
+
+int CLOSE(int socket){
+
+}
