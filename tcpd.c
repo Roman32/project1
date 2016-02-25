@@ -40,7 +40,7 @@ struct tcphdr {
                  fin:1;
  #else
  #error  "Adjust your <asm/byteorder.h> defines"
- #endif  
+ #endif
          __u16   window;
          __u16   check;
          __u16   urg_ptr;
@@ -51,7 +51,7 @@ struct sockaddr_in client;
 struct sockaddr_in server;
 struct sockaddr_in troll;
 struct sockaddr_in final;
-
+struct sockaddr_in timer;
 typedef struct TrollHeader{
 	struct sockaddr_in header;
 	//char body[1000];
@@ -66,9 +66,11 @@ typedef struct Packet{
 unsigned short checksum(char *data_p, int length);
 
 int main(int argc, char argv[]){
-	
+
 	int sockIn;
 	int sockOut;
+	int timer_sock;
+	int timer_buff_len;
 	int bytes =0;
 	int bytesIn =0;
 	int bytesToServ = 0;
@@ -84,7 +86,7 @@ int main(int argc, char argv[]){
 		printf("Error! Proper use is ./tcpd");
 		exit(1);
 	}
-	
+
 	/*Set up for Client Socket*/
 	sockIn = socket(AF_INET,SOCK_DGRAM,0);
 	client.sin_family = AF_INET;
@@ -93,8 +95,8 @@ int main(int argc, char argv[]){
 	if(bind(sockIn,(struct sockaddr*)&client,sizeof(client)) < 0){
 		perror("Failed to bind socket for client comm.\n");
 	}
-	
-		
+
+
 	/*Set up for sending to Server*/
 	sockOut = socket(AF_INET,SOCK_DGRAM,0);
 	server.sin_family = AF_INET;
@@ -103,15 +105,38 @@ int main(int argc, char argv[]){
 	if(bind(sockOut,(struct sockaddr*)&server,sizeof(server)) < 0){
 		perror("Failed to bind socket for server comm.\n");
 	}
-	
+
+
+
+	/**set up for timer socket**/
+	struct hostent *timerhp, *gethostbyname();
+	/* create socket for connecting to timer */
+	timer_sock = socket(AF_INET, SOCK_DGRAM,0);
+	if(timer_sock < 0) {
+		perror("opening datagram socket");
+		exit(2);
+	}
+	/* construct name for connecting to server */
+	timer.sin_family = AF_INET;
+	timer.sin_port = htons(TIMERPORT);
+	/* convert hostname to IP address and enter into name */
+	timerhp = gethostbyname(clientIP);
+	if(timerhp == 0) {
+		fprintf(stderr, "%s:unknown host\n", timerhp);
+		exit(3);
+	}
+	bcopy((char *)timerhp->h_addr, (char *)&timer.sin_addr, timerhp->h_length);
+
+
+
 	head.header.sin_family = htons(AF_INET);
 	head.header.sin_addr.s_addr = inet_addr(serverIP);
 	head.header.sin_port = htons(TCPDOUT);
-		
+
 	final.sin_family = AF_INET;
 	final.sin_port = htons(SERVERPORT);
 	final.sin_addr.s_addr = inet_addr(serverIP);
-	
+
 	troll.sin_family = AF_INET;
 	troll.sin_addr.s_addr = inet_addr(clientIP);
 	troll.sin_port = htons(TROLLPORT);
@@ -151,11 +176,11 @@ int main(int argc, char argv[]){
 	pcktS.tcpHdr.window = htons(MSS);
 	pcktS.tcpHdr.check = 0;
 	pcktS.tcpHdr.urg_ptr = 0;
-	
+
 	FD_ZERO(&portUp);
 	FD_SET(sockIn, &portUp);
 	FD_SET(sockOut, &portUp);
-	
+
 	while(1){
 		if(select(FD_SETSIZE,&portUp,NULL,NULL,NULL)){
 			//perror("select");
@@ -165,20 +190,21 @@ int main(int argc, char argv[]){
 			bzero(&buffer,sizeof(buffer));
 			int addr_len =sizeof(client);
 			bytesIn = recvfrom(sockIn,buffer,sizeof(buffer),0,(struct sockaddr *)&client,&addr_len);
-			seq_num++;	//increment seq# each time 
+			seq_num++;	//increment seq# each time
 			pckt.tcpHdr.seq = seq_num; //set seq num;
 			pckt.tcpHdr.ack_seq = 0;
 			printf("Bytes from client :%d\n",bytesIn);
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
+      //call send timer here
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			printf("Sent to the Troll: %d\n",bytesToTroll);
 			sleep(1);
-			
+
 		}
 		if(FD_ISSET(sockOut,&portUp)){
-			bzero(&bufferOut,sizeof(bufferOut));			
+			bzero(&bufferOut,sizeof(bufferOut));
 			int addr_len = sizeof(server);
 			bytes =recvfrom(sockOut,bufferOut,sizeof(bufferOut),0,(struct sockaddr*)&server,&addr_len);
 			memcpy(&pcktS.trollhdr,bufferOut,sizeof(struct TrollHeader)); //Copy troll header to recieved packet troll header, not really needed.
@@ -203,9 +229,9 @@ int main(int argc, char argv[]){
 		}
 		FD_ZERO(&portUp);
 		FD_SET(sockIn, &portUp);
-		FD_SET(sockOut, &portUp);		
-	}	
-	
+		FD_SET(sockOut, &portUp);
+	}
+
 	return 0;
 }
 
@@ -232,12 +258,12 @@ unsigned short checksum(char *data_p, int length)
       do
       {
             for (i=0, data=(unsigned int)0xff & *data_p++;
-                 i < 8; 
+                 i < 8;
                  i++, data >>= 1) //Iterting over the bits of the data to be checksummed.
             {
                   if ((crc & 0x0001) ^ (data & 0x0001)) //checks if the bits differ
                         crc = (crc >> 1) ^ POLY; //Shifting bits left by 1, and XORing with 0x8408.
-                  else  crc >>= 1;  
+                  else  crc >>= 1;
             }
       } while (--length);
 
@@ -246,4 +272,33 @@ unsigned short checksum(char *data_p, int length)
       crc = (crc << 8) | (data >> 8 & 0xff);//crc shifted 8 bits to the left OR'd with data shifted 8 to right AND'd with 255 or 11111111
 
       return (crc);
+}
+
+void send_to_timer(uint8_t packet_type,
+uint32_t seq_num,
+uint64_t tv_sec,
+uint64_t tv_usec,
+int sock,
+struct sockaddr_in name){
+	int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
+	//printf("buffsize is %d\n",buffSize);
+	printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
+	char *cli_buf = malloc(buffSize);
+    bzero(cli_buf,buffSize);
+
+    seq_num = htonl(seq_num);
+    tv_sec = htobe64(tv_sec);
+    tv_usec = htobe64(tv_usec);
+
+	memcpy(cli_buf,&packet_type,1);
+	memcpy(cli_buf+1,&seq_num,4);
+	memcpy(cli_buf+5,&tv_sec,8);
+	memcpy(cli_buf+13,&tv_usec,8);
+
+	int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    //printf("res is %d\n",res);
+    if(res <0) {
+	perror("sending datagram message");
+	exit(4);
+    }
 }
