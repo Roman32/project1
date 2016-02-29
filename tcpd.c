@@ -9,6 +9,7 @@
 
 
 #include "globals.h"
+#include "buffer_window.h"
 
 /* For Reference 20 bytes long
 struct tcphdr {
@@ -62,6 +63,17 @@ typedef struct Packet{
 	struct tcphdr tcpHdr;
 	char payload[MSS];
 }Packet;
+
+#define MAX_BUFF 64000
+extern char servBuffer[MAX_BUFF];
+extern char cliBuffer[MAX_BUFF];
+
+extern char *servStart;
+extern char *servEnd;
+extern char *cliStart;
+extern char *cliEnd;
+extern int isBuffFull;
+extern int bytesInBuff;
 
 unsigned short checksum(char *data_p, int length);
 
@@ -125,7 +137,7 @@ int main(int argc, char argv[]){
 		fprintf(stderr, "%s:unknown host\n", timerhp);
 		exit(3);
 	}
-	bcopy((char *)timerhp->h_addr, (char *)&timer.sin_addr, timerhp->h_length);
+	//bcopy((char *)&timerhp->h_addr, (char *)&timer.sin_addr, timerhp->h_length);
 
 
 
@@ -190,13 +202,14 @@ int main(int argc, char argv[]){
 			bzero(&buffer,sizeof(buffer));
 			int addr_len =sizeof(client);
 			bytesIn = recvfrom(sockIn,buffer,sizeof(buffer),0,(struct sockaddr *)&client,&addr_len);
+			writeToBufferC(bytesIn,buffer);
 			seq_num++;	//increment seq# each time
 			pckt.tcpHdr.seq = seq_num; //set seq num;
 			pckt.tcpHdr.ack_seq = 0;
 			printf("Bytes from client :%d\n",bytesIn);
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
-			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
+			//printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
       //call send timer here
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			printf("Sent to the Troll: %d\n",bytesToTroll);

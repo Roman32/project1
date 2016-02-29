@@ -1,9 +1,9 @@
 #Makefile for Lab2
 
 CC = gcc
-OBJCLI = ftpc.c wrapper_funcs.c 
+OBJCLI = ftpc.c wrapper_funcs.c
 OBJSRV = ftps.c wrapper_funcs.c
-OBJD = tcpd.c wrapper_funcs.c
+OBJD = tcpd.c wrapper_funcs.c buffer_window.c
 OBJTIME = timer.c
 OBJTTIME = timer_test_file.c
 all: ftpc ftps tcpd timer testT

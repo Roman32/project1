@@ -7,14 +7,16 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include "buffer_window.h"
+
 #define MAX_BUFF 64000
 char servBuffer[MAX_BUFF];
 char cliBuffer[MAX_BUFF];
 
 char *servStart = &servBuffer[0];
-char *servEnd = servStart;
+char *servEnd = &servBuffer[0];
 char *cliStart = &cliBuffer[0];
-char *cliEnd = cliStart;
+char *cliEnd = &cliBuffer[0];
 int isBuffFull = 0; // Set to 1 if  full, 0 not full
 int bytesInBuff = 0; // used to see if buffer should be set to full, incremented by # of bytes added to buffer
 
@@ -30,20 +32,48 @@ Pkt_Info cliWindow[20];
 
 int writeToBufferC(int bytesToWrite, char pktBuffer[]){
 	int bytesWritten = 0;
+	isBuffFilled();
 	if(isBuffFull == 1){
 		printf("The buffer is full!\n");
 	}else{
 		if(isBuffFull == 0 && (cliEnd + bytesToWrite) >= cliStart){
-			bytesInBuff += bytesToWrite;
-			memcpy(&cliBuffer,&pktBuffer,bytesToWrite);
-			cliEnd += bytesInBuff;
+			if((cliEnd+bytesToWrite) < (cliBuffer+MAX_BUFF)){
+				//printf("The buffer is %s\n",pktBuffer);
+				printf("Value of cliEnd is %p\n",cliEnd);
+				bytesInBuff += bytesToWrite;
+				memcpy(&cliBuffer+*cliEnd,&pktBuffer,bytesToWrite);
+				cliEnd = cliEnd+bytesToWrite;
+				bytesWritten = bytesToWrite;
+				printf("Bytes in Buffer is %d\n",bytesInBuff);
+				printf("Value of cliEnd is %d\n",(int)*cliEnd);
+			}else if((cliEnd+bytesToWrite) == (cliBuffer+MAX_BUFF)){
+				bytesInBuff += bytesToWrite;
+				memcpy(&cliBuffer+*cliEnd,&pktBuffer,bytesToWrite);
+				cliEnd = &cliBuffer[0];
+				bytesWritten = bytesToWrite;
+			}else{
+				int remainder = (int)(cliBuffer+MAX_BUFF) - *cliEnd;
+				memcpy(&cliBuffer,&pktBuffer,(int)(cliBuffer+MAX_BUFF)-*cliEnd);
+				memcpy(&cliBuffer,&pktBuffer,remainder);
+				cliEnd = &cliBuffer[0]+remainder;
+				bytesWritten = bytesToWrite;
+				
+			}
 		}
 	}
+	return bytesWritten;
+}
 
-void readFromBufferC();
+void readFromBufferC(char pktBuffer[]){
+	int bytesRead = 0;
+	if(isBuffFull == 0 && bytesInBuff == 0){
+		printf("The Buffer is empty!\n");
+	}
+	
+}
 
 int isBuffFilled(){
-	if(bytesInBuff == MAX_BUFF){
+	if(bytesInBuff >=MAX_BUFF){
 		isBuffFull = 1;
 		return 1;
 	}
