@@ -55,7 +55,7 @@ struct sockaddr_in final;
 struct sockaddr_in timer_listen;
 struct sockaddr_in timer_send;
 struct sockaddr_in ackFromServer;
-struct sockaddr_in ackToServer;
+struct sockaddr_in ackToClient;
 
 typedef struct TrollHeader{
 	struct sockaddr_in header;
@@ -78,6 +78,15 @@ extern char *cliStart;
 extern char *cliEnd;
 extern int isBuffFull;
 extern int bytesInBuff;
+
+void send_to_timer(uint8_t packet_type,
+	uint32_t seq_num,
+	uint64_t tv_sec,
+	uint64_t tv_usec,
+	int sock,
+	struct sockaddr_in name);
+
+void send_ack(uint32_t seq_num);
 
 unsigned short checksum(char *data_p, int length);
 
@@ -256,7 +265,7 @@ int main(int argc, char argv[]){
 			 int ack_bytes_in = recvfrom(ackFserverSock,ackBuffer,36,0,(struct sockaddr*)&ackFromServer,&addr_len);
 			 //figure out where ack is in tcp header
 			 //call function to send a packet to timer to cancel timer for packet seq
-			 //call function to remove packet from buffer 
+			 //call function to remove packet from buffer
 		}
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
@@ -358,4 +367,33 @@ struct sockaddr_in name){
 	perror("sending datagram message");
 	exit(4);
     }
+}
+
+void send_ack(uint32_t seq_num){
+	//build tcp ack header
+	//send without body (ack seq is in tcp header)
+
+		troll.sin_family = AF_INET;
+		troll.sin_addr.s_addr = inet_addr(serverIP);
+		troll.sin_port = htons(STROLLPORT);
+
+		/*Packet to Troll*/
+		memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
+		memcpy(&pckt.tcpHdr.source,&client.sin_port,sizeof(client.sin_port));
+		memcpy(&pckt.tcpHdr.dest,&final.sin_port,sizeof(client.sin_port));
+		pckt.tcpHdr.res1 = 0;
+		pckt.tcpHdr.doff = 5;
+		pckt.tcpHdr.fin = 0;
+	        pckt.tcpHdr.syn = 0;
+	        pckt.tcpHdr.rst = 0;
+	        pckt.tcpHdr.psh = 0;
+	        pckt.tcpHdr.ack = 0;
+	        pckt.tcpHdr.urg = 0;
+	        pckt.tcpHdr.ece = 0;
+	        pckt.tcpHdr.cwr = 0;
+		pckt.tcpHdr.window = htons(MSS);
+		pckt.tcpHdr.check = 0;
+		pckt.tcpHdr.urg_ptr = 0;
+
+
 }
