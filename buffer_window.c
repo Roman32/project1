@@ -30,10 +30,11 @@ typedef struct Pkt_Info{
 
 Pkt_Info serWindow[20];
 Pkt_Info cliWindow[20];
+int windIndex;
 
-int writeToBufferC(int bytesToWrite, char pktBuffer[]){
+int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 	int bytesWritten = 0;
-	isBuffFilled();
+	isBuffFull = isBuffFilled();
 	if(isBuffFull == 1){
 		printf("The buffer is full!\n");
 	}else{
@@ -46,43 +47,45 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[]){
 				cliEnd = cliEnd+bytesToWrite;
 				bytesWritten = bytesToWrite;
 				printf("Bytes in Buffer is %d\n",bytesInBuff);
-				printf("Value of cliEnd is %d\n",(int)*cliEnd);
-			}else if((cliEnd+bytesToWrite) == (cliBuffer+MAX_BUFF)){
+				printf("Value of cliEnd is %p\n",cliEnd);
+			}else if((cliEnd+bytesToWrite) == (cliBuffer+MAX_BUFF) && cliStart != &cliBuffer[0] ){
 				bytesInBuff += bytesToWrite;
 				memcpy(&cliBuffer+*cliEnd,&pktBuffer,bytesToWrite);
 				cliEnd = &cliBuffer[0];
 				bytesWritten = bytesToWrite;
-			}else{
-				int remainder = (int)(cliBuffer+MAX_BUFF) - *cliEnd;
-				memcpy(&cliBuffer,&pktBuffer,(int)(cliBuffer+MAX_BUFF)-*cliEnd);
+			}else if((cliEnd+bytesToWrite > cliBuffer+MAX_BUFF) && cliStart != &cliBuffer[0]){
+				int remainder = (int)((cliBuffer+MAX_BUFF) - cliEnd);
+				memcpy(&cliBuffer+*cliEnd,&pktBuffer,(cliBuffer+MAX_BUFF)-cliEnd);
 				memcpy(&cliBuffer,&pktBuffer,remainder);
 				cliEnd = &cliBuffer[0]+remainder;
-				bytesWritten = bytesToWrite;
-				
+				bytesWritten = bytesToWrite;			
+			}else{
+				printf("shit is full!\n");
+				printf("Address for end of buffer should be: %p\n",&cliBuffer[0]+MAX_BUFF);
 			}
 		}
 	}
 	return bytesWritten;
 }
 
-int readFromBufferC(char pktBuffer[]){
+int readFromBufferC(char pktBuffer[],int seq_num){
 	int bytesRead = 0;
+	isBuffFull = isBuffFilled();
 	if(isBuffFull == 0 && bytesInBuff == 0){
 		printf("The Buffer is empty!\n");
 	}else{
-		if(cliStart < cliEnd && cliStart <= cliBuffer+MAX_BUFF){
-			//memcpy(&pktBuffer,&cliBuffer+*cliStart,MSS);
-			printf("Value of cliStart is %p\n",cliStart);
-			cliStart = &cliBuffer[0]+MSS;
-			printf("Value of cliStart is %p\n",cliStart);
+		int i;	
+		for(i = 0; i < 20;i++){
+			if(cliWindow[i].seq_num == seq_num){
+				memcpy(&pktBuffer,cliWindow[i].pktStart,cliWindow[i].sizeOfPkt);
+			}
 		}
 	}
-	
+	return 0;
 }
 
 int isBuffFilled(){
 	if(bytesInBuff >= MAX_BUFF){
-		isBuffFull = 1;
 		return 1;
 	}
 	return 0;

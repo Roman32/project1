@@ -5,8 +5,8 @@
 #include <string.h>
 #include <strings.h>
 
-int writeToBufferC(int bytesToWrite, char pktBuffer[]);
+int writeToBufferC(int bytesToWrite, char pktBuffer[], int seq_num);
 int isBuffFilled();
-int readFromBufferC(char pktBuffer[]);
+int readFromBufferC(char pktBuffer[],int seq_num);
 
 #endif
