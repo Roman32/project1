@@ -261,7 +261,7 @@ int main(int argc, char argv[]){
 			}			
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
-			//printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
+			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 			//call calculate rtt
 
       			//call send timer here

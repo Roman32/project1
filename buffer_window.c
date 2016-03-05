@@ -74,12 +74,7 @@ int readFromBufferC(char pktBuffer[],int seq_num){
 	if(isBuffFull == 0 && bytesInBuff == 0){
 		printf("The Buffer is empty!\n");
 	}else{
-		int i;	
-		for(i = 0; i < 20;i++){
-			if(cliWindow[i].seq_num == seq_num){
-				memcpy(&pktBuffer,cliWindow[i].pktStart,cliWindow[i].sizeOfPkt);
-			}
-		}
+		
 	}
 	return 0;
 }
