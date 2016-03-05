@@ -55,7 +55,7 @@ struct sockaddr_in final;
 struct sockaddr_in timer_listen;
 struct sockaddr_in timer_send;
 struct sockaddr_in ackFromServer;
-struct sockaddr_in ackToClient;
+struct sockaddr_in ackToServerTroll;
 
 typedef struct TrollHeader{
 	struct sockaddr_in header;
@@ -99,6 +99,7 @@ int main(int argc, char argv[]){
 	int sockIn;
 	int sockOut;
 	int ackFserverSock;
+	int sendAckSock;
 	int timer_lsock;
 	int timer_ssock;
 	int timer_buff_len;
@@ -159,14 +160,16 @@ int main(int argc, char argv[]){
 	if(bind(timer_lsock,(struct sockaddr*)&timer_listen,sizeof(timer_listen)) < 0){
 		perror("Failed to bind socket for timer comm.poo2\n");
 	}
-
-  ackFserverSock = socket(AF_INET, SOCK_DGRAM,0);
+    /* set up sock to receive acks from server troll */
+    ackFserverSock = socket(AF_INET, SOCK_DGRAM,0);
 	ackFromServer.sin_family = AF_INET;
 	ackFromServer.sin_port = htonl(9992);
 	ackFromServer.sin_addr.s_addr = 0;
 	if(bind(ackFserverSock,(struct sockaddr*)&ackFromServer,sizeof(ackFromServer)) < 0){
 		perror("Failed to bind socket for incoming ackspoo3\n");
 	}
+
+	/* set up sock to send ack to server troll */
 
 
 
@@ -268,9 +271,11 @@ int main(int argc, char argv[]){
 		}
 		//receiving from tcpd server side acks
 		if(FD_ISSET(ackFserverSock,&portUp)){
-       			 bzero(&ackBuffer,sizeof(ackBuffer));
+			 printf("received ack port activity\n");
+       	     bzero(&ackBuffer,sizeof(ackBuffer));
 			 int addr_len = sizeof(ackFromServer);
 			 int ack_bytes_in = recvfrom(ackFserverSock,ackBuffer,36,0,(struct sockaddr*)&ackFromServer,&addr_len);
+			 printf("received ack bytes %d\n",ack_bytes_in);
 			 //figure out where ack is in tcp header
 			 //call function to send a packet to timer to cancel timer for packet seq
 			 //call function to remove packet from buffer
@@ -297,6 +302,16 @@ int main(int argc, char argv[]){
 				printf("Checksum rcvd is: %hu\n",checkRecv);
 				printf("Checksum calculated is %hu\n",check);
 			}
+			//put received info into buffer
+			//send ack to troll on server side
+			send_ack(pcktS.tcpHdr.seq);
+
+
+
+
+
+
+			//send bytes to server
 			bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 			printf("Bytes sent to server:%d\n",bytesToServ);
 		}
@@ -374,17 +389,22 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
 }
 
 void send_ack(uint32_t seq_num){
+	int serverTrollSock;
+
+	serverTrollSock = socket(AF_INET,SOCK_DGRAM,0);
+	ackToServerTroll.sin_family = AF_INET;
+	ackToServerTroll.sin_port = htons(TCPDIN);
+	ackToServerTroll.sin_addr.s_addr = inet_addr("0");
+	if(bind(serverTrollSock,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll)) < 0){
+		perror("Failed to bind socket for ackToServerTroll comm.\n");
+	}
 	//build tcp ack header
 	//send without body (ack seq is in tcp header)
 
-		troll.sin_family = AF_INET;
-		troll.sin_addr.s_addr = inet_addr(serverIP);
-		troll.sin_port = htonl(STROLLPORT);
-
 		/*Packet to Troll*/
 		memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
-		memcpy(&pckt.tcpHdr.source,&client.sin_port,sizeof(client.sin_port));
-		memcpy(&pckt.tcpHdr.dest,&final.sin_port,sizeof(client.sin_port));
+		memcpy(&pckt.tcpHdr.source,&server.sin_port,sizeof(server.sin_port));
+		memcpy(&pckt.tcpHdr.dest,&ackToServerTroll.sin_port,sizeof(ackToServerTroll.sin_port));
 		pckt.tcpHdr.res1 = 0;
 		pckt.tcpHdr.doff = 5;
 		pckt.tcpHdr.fin = 0;
@@ -398,6 +418,11 @@ void send_ack(uint32_t seq_num){
 		pckt.tcpHdr.window = htons(MSS);
 		pckt.tcpHdr.check = 0;
 		pckt.tcpHdr.urg_ptr = 0;
-
+		int bytesToTroll = sendto(serverTrollSock,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)),0,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll));
+    	//printf("res is %d\n",res);
+    	if(bytesToTroll < 0) {
+		perror("sending datagram message ack");
+		exit(4);
+    	}
 
 }
