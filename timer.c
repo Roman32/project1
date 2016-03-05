@@ -40,6 +40,10 @@ The time structures involved are defined in <sys/time.h> and look
 
 
 struct sockaddr_in timer_sockaddr;
+struct sockaddr_in tcpd;
+int tcpd_out_sock;
+
+
 
 struct time_node *head = NULL;
 struct time_node *cursor = NULL;
@@ -135,10 +139,13 @@ int alert_tcpd();
 //returns 1 if seq_num is present in list, -1 otherwise
 int seq_is_present(uint32_t s_num);
 
+int send_expr_notice(uint32_t s_num);
 
 
 int main(){
-
+  tcpd.sin_family = AF_INET;
+  tcpd.sin_port = htons(TCPDIN);
+  tcpd.sin_addr.s_addr = 0;
   fd_set portUp;
 	//for sleeping the program
 
@@ -494,8 +501,10 @@ int add_to_list(struct timeval *d_time, uint32_t s_num){
      head -> delta_time = upd_head_time;
 
      if(res > 0){
+       send_expr_notice(head -> seq_num);
        remove_from_list(head -> seq_num);
        printf("Head node expired. Time to send a packet to TCPD\n");
+       
      }else{
        head -> delta_time = upd_head_time;
      }
@@ -516,6 +525,20 @@ int seq_is_present(uint32_t s_num){
   }
 
   return found_flag;
+}
+
+int send_expr_notice(uint32_t s_num){
+   int buffSize = sizeof(uint32_t);
+   char *tcpd_buf = malloc(buffSize);
+   bzero(tcpd_buf,buffSize);
+   s_num = htonl(s_num);
+   memcpy(tcpd_buf,&s_num,4);
+   int res = sendto(tcpd_out_sock, tcpd_buf,buffSize, 0, (struct sockaddr *)&tcpd, sizeof(tcpd));
+      //printf("res is %d\n",res);
+      if(res < 0) {
+        perror("sending datagram message");
+        exit(4);
+      }
 }
 /**** Unit testing section ****/
 /*

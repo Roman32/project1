@@ -356,9 +356,9 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
 	char *cli_buf = malloc(buffSize);
     	bzero(cli_buf,buffSize);
 
-    	seq_num = htonl(seq_num);
-    	tv_sec = htobe64(tv_sec);
-    	tv_usec = htobe64(tv_usec);
+	seq_num = htonl(seq_num);
+	tv_sec = htobe64(tv_sec);
+	tv_usec = htobe64(tv_usec);
 
 	memcpy(cli_buf,&packet_type,1);
 	memcpy(cli_buf+1,&seq_num,4);
