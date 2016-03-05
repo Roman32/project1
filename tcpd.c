@@ -90,9 +90,11 @@ void send_to_timer(uint8_t packet_type,
 	int sock,
 	struct sockaddr_in name);
 
-void send_ack(uint32_t seq_num);
+void send_ack(uint32_t seq_num, int sock, struct sockaddr_in ackToServerTroll);
 
 unsigned short checksum(char *data_p, int length);
+
+
 
 int main(int argc, char argv[]){
 
@@ -102,6 +104,7 @@ int main(int argc, char argv[]){
 	int sendAckSock;
 	int timer_lsock;
 	int timer_ssock;
+	int serverTrollSock;
 	int timer_buff_len;
 	int bytes =0;
 	int bytesIn =0;
@@ -170,7 +173,15 @@ int main(int argc, char argv[]){
 	}
 
 	/* set up sock to send ack to server troll */
+    
 
+	serverTrollSock = socket(AF_INET,SOCK_DGRAM,0);
+	ackToServerTroll.sin_family = AF_INET;
+	ackToServerTroll.sin_port = htons(STROLLPORT);
+	ackToServerTroll.sin_addr.s_addr = inet_addr("0");
+	if(bind(serverTrollSock,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll)) < 0){
+		perror("Failed to bind socket for ackToServerTroll comm.\n");
+	}
 
 
 
@@ -304,7 +315,7 @@ int main(int argc, char argv[]){
 			}
 			//put received info into buffer
 			//send ack to troll on server side
-			send_ack(pcktS.tcpHdr.seq);
+			send_ack(pcktS.tcpHdr.seq,serverTrollSock,ackToServerTroll);
 
 
 
@@ -388,16 +399,8 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
     	}
 }
 
-void send_ack(uint32_t seq_num){
-	int serverTrollSock;
-
-	serverTrollSock = socket(AF_INET,SOCK_DGRAM,0);
-	ackToServerTroll.sin_family = AF_INET;
-	ackToServerTroll.sin_port = htons(TCPDIN);
-	ackToServerTroll.sin_addr.s_addr = inet_addr("0");
-	if(bind(serverTrollSock,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll)) < 0){
-		perror("Failed to bind socket for ackToServerTroll comm.\n");
-	}
+void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToServerTroll){
+	
 	//build tcp ack header
 	//send without body (ack seq is in tcp header)
 
