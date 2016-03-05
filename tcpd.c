@@ -207,6 +207,10 @@ int main(int argc, char argv[]){
 			pckt.tcpHdr.seq = seq_num; //set seq num;
 			pckt.tcpHdr.ack_seq = 0;
 			printf("Bytes from client :%d\n",bytesIn);
+			if(isBuffFilled){
+				readFromBufferC(buffer);
+			}
+			
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
 			//printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
@@ -214,6 +218,7 @@ int main(int argc, char argv[]){
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			printf("Sent to the Troll: %d\n",bytesToTroll);
 			sleep(1);
+			
 
 		}
 		if(FD_ISSET(sockOut,&portUp)){

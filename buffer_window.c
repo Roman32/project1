@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "buffer_window.h"
+#include "globals.h"
 
 #define MAX_BUFF 64000
 char servBuffer[MAX_BUFF];
@@ -64,16 +65,23 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[]){
 	return bytesWritten;
 }
 
-void readFromBufferC(char pktBuffer[]){
+int readFromBufferC(char pktBuffer[]){
 	int bytesRead = 0;
 	if(isBuffFull == 0 && bytesInBuff == 0){
 		printf("The Buffer is empty!\n");
+	}else{
+		if(cliStart < cliEnd && cliStart <= cliBuffer+MAX_BUFF){
+			//memcpy(&pktBuffer,&cliBuffer+*cliStart,MSS);
+			printf("Value of cliStart is %p\n",cliStart);
+			cliStart = &cliBuffer[0]+MSS;
+			printf("Value of cliStart is %p\n",cliStart);
+		}
 	}
 	
 }
 
 int isBuffFilled(){
-	if(bytesInBuff >=MAX_BUFF){
+	if(bytesInBuff >= MAX_BUFF){
 		isBuffFull = 1;
 		return 1;
 	}

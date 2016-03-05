@@ -7,6 +7,6 @@
 
 int writeToBufferC(int bytesToWrite, char pktBuffer[]);
 int isBuffFilled();
-void readFromBufferC();
+int readFromBufferC(char pktBuffer[]);
 
 #endif
