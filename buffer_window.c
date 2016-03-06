@@ -43,25 +43,25 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				//printf("The buffer is %s\n",pktBuffer);
 				printf("Value of cliEnd is %d\n",cliEnd);
 				bytesInBuff += bytesToWrite;
-				memcpy(cliBuffer+cliEnd,&pktBuffer,bytesToWrite);
+				memcpy(cliBuffer+cliEnd,pktBuffer,bytesToWrite);
 				cliEnd += bytesToWrite;
 				bytesWritten = bytesToWrite;
 				printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite) == (MAX_BUFF) && cliStart != 0 ){
 				bytesInBuff += bytesToWrite;
-				memcpy(cliBuffer+cliEnd,&pktBuffer,bytesToWrite);
+				memcpy(cliBuffer+cliEnd,pktBuffer,bytesToWrite);
 				cliEnd = 0;
 				bytesWritten = bytesToWrite;
 			}else if((cliEnd+bytesToWrite > MAX_BUFF) && cliStart != 0){
 				int remainder = (MAX_BUFF - cliEnd);
-				memcpy(cliBuffer+cliEnd,&pktBuffer,(MAX_BUFF)-cliEnd);
-				memcpy(cliBuffer,&pktBuffer,remainder);
+				memcpy(cliBuffer+cliEnd,pktBuffer,(MAX_BUFF)-cliEnd);
+				memcpy(cliBuffer,pktBuffer,remainder);
 				cliEnd = remainder;
 				bytesWritten = bytesToWrite;	
 				bytesInBuff += bytesToWrite;		
 			}else{
-				printf("shit is full!\n");
+				printf("shit is full! But not really!\n");
 				isBuffFull =1;
 			}
 		}
@@ -75,20 +75,24 @@ int readFromBufferC(char pktBuffer[],int seq_num){
 	if(isBuffFull == 0 && bytesInBuff == 0){
 		printf("The Buffer is empty!\n");
 	}else{
-		printf("here2\n");
 		if(cliStart < MAX_BUFF){
-			memcpy(&pktBuffer,cliBuffer+cliStart,MSS);
-			printf("here3\n");
+			memcpy(pktBuffer,cliBuffer+cliStart,MSS);
+			printf("Data Starts at %d\n",cliStart);
+			cliStart+=MSS;
 			bytesInBuff -= MSS;
 			printf("%d",bytesInBuff);
 		}else if(cliStart+MSS > MAX_BUFF){
-			printf("here4\n");
+			printf("Data Starts at %d\n",cliStart);
 			int remainder = (MAX_BUFF - cliStart);			
-			memcpy(&pktBuffer,cliBuffer+cliStart,remainder);
-			memcpy(&pktBuffer+remainder,cliBuffer,MSS-remainder);
+			memcpy(pktBuffer,cliBuffer+cliStart,remainder);
+			memcpy(pktBuffer+remainder,cliBuffer,MSS-remainder);
 			bytesInBuff -= remainder;
 			bytesInBuff -= MSS-remainder;
 			cliStart = remainder;
+			printf("%d",bytesInBuff);
+		}else if(cliStart+MSS == MAX_BUFF && cliEnd != 0){
+			memcpy(pktBuffer,cliBuffer+cliStart,MSS);
+			cliStart = 0;
 		}
 	}
 	return 0;

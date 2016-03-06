@@ -269,10 +269,10 @@ int main(int argc, char argv[]){
 			printf("Bytes written to buffer %d\n",writeToBufferC(bytesIn,buffer,seq_num));
 			
 			//printf("Bytes from client :%d\n",bytesIn);
-			if(isBuffFilled){
+			
 				printf("here\n");
 				readFromBufferC(buffer,seq_num);
-			}			
+						
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
