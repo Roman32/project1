@@ -270,21 +270,22 @@ int main(int argc, char argv[]){
 			
 			//printf("Bytes from client :%d\n",bytesIn);
 			
-			printf("here\n");
-			bzero(&buffer,sizeof(buffer));
-			readFromBufferC(buffer,bytesIn);
-						
+			
+			bzero(&buffer,sizeof(buffer));			
+			printf("Bytes read from buffer %d\n",readFromBufferC(buffer,bytesIn));
+			
+			
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 			//call calculate rtt
 			
-            send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+            		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			//printf("Sent to the Troll: %d\n",bytesToTroll);
-			//sleep(1);			
-
+			//sleep(1);
+					
 		}
 		//receiving from timer
 		if(FD_ISSET(timer_lsock,&portUp)){
