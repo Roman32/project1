@@ -24,4 +24,4 @@ testT:	$(OBJTTIME)
 	$(CC) -o $@ $(OBJTTIME)
 		
 clean:
-	rm ftpc ftps ftpc timer testT
+	rm ftpc ftps tcpd timer testT
