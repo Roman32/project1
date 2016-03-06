@@ -179,19 +179,19 @@ int main(int argc, char argv[]){
     /* set up sock to receive acks from server troll */
     ackFserverSock = socket(AF_INET, SOCK_DGRAM,0);
 	ackFromServer.sin_family = AF_INET;
-	ackFromServer.sin_port = htonl(9992);
+	ackFromServer.sin_port = htons(ACKRPORT);
 	ackFromServer.sin_addr.s_addr = 0;
 	if(bind(ackFserverSock,(struct sockaddr*)&ackFromServer,sizeof(ackFromServer)) < 0){
 		perror("Failed to bind socket for incoming ackspoo3\n");
 	}
 
-	/* set up sock to send ack to server troll */
+	/* set up sock to send ack l */
     
 
 	//serverTrollSock = socket(AF_INET,SOCK_DGRAM,0);
 	ackToServerTroll.sin_family = AF_INET;
 	ackToServerTroll.sin_port = htons(STROLLPORT);
-	ackToServerTroll.sin_addr.s_addr = inet_addr("0");
+	ackToServerTroll.sin_addr.s_addr = 0;
 	/*if(bind(serverTrollSock,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll)) < 0){
 		perror("Failed to bind socket for ackToServerTroll comm.\n");
 	}*/
@@ -304,6 +304,7 @@ int main(int argc, char argv[]){
 			 int addr_len = sizeof(ackFromServer);
 			 int ack_bytes_in = recvfrom(ackFserverSock,ackBuffer,36,0,(struct sockaddr*)&ackFromServer,&addr_len);
 			 printf("received ack bytes %d\n",ack_bytes_in);
+             //prtinf("ack num is %d\n",ackBuffer.????);
 			 //figure out where ack is in tcp header
 			 //call function to send a packet to timer to cancel timer for packet seq
 			 //call function to remove packet from buffer
@@ -401,7 +402,7 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
     
 	int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
 	//printf("buffsize is %d\n",buffSize);
-	printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
+	//printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
 	char *cli_buf = malloc(buffSize);
     	bzero(cli_buf,buffSize);
 
@@ -428,17 +429,21 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 	//send without body (ack seq is in tcp header)
 
 		/*Packet to Troll*/
-/*
+        head.header.sin_family = htons(AF_INET);
+		head.header.sin_addr.s_addr = inet_addr(clientIP);
+		head.header.sin_port = htons(ACKRPORT);
+
 		memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
 		memcpy(&pckt.tcpHdr.source,&server.sin_port,sizeof(server.sin_port));
 		memcpy(&pckt.tcpHdr.dest,&ackToServerTroll.sin_port,sizeof(ackToServerTroll.sin_port));
+        
 		pckt.tcpHdr.res1 = 0;
 		pckt.tcpHdr.doff = 5;
 		pckt.tcpHdr.fin = 0;
 	        pckt.tcpHdr.syn = 0;
 	        pckt.tcpHdr.rst = 0;
 	        pckt.tcpHdr.psh = 0;
-	        pckt.tcpHdr.ack = 0;
+	        pckt.tcpHdr.ack = 1;
 	        pckt.tcpHdr.urg = 0;
 	        pckt.tcpHdr.ece = 0;
 	        pckt.tcpHdr.cwr = 0;
@@ -446,11 +451,31 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 		pckt.tcpHdr.check = 0;
 		pckt.tcpHdr.urg_ptr = 0;
 		int bytesToTroll = sendto(serverTrollSock,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)),0,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll));
-    	//printf("res is %d\n",res);
+    	printf("res in ack send is %d\n",bytesToTroll);
     	if(bytesToTroll < 0) {
 		perror("sending datagram message ack");
 		exit(4);
-    	}*/
+    	}
+        head.header.sin_family = htons(AF_INET);
+		head.header.sin_addr.s_addr = inet_addr(serverIP);
+		head.header.sin_port = htons(TCPDOUT);
+        memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
+		memcpy(&pckt.tcpHdr.source,&client.sin_port,sizeof(client.sin_port));
+		memcpy(&pckt.tcpHdr.dest,&final.sin_port,sizeof(client.sin_port));
+		pckt.tcpHdr.res1 = 0;
+		pckt.tcpHdr.doff = 5;
+		pckt.tcpHdr.fin = 0;
+		    pckt.tcpHdr.syn = 0;
+		    pckt.tcpHdr.rst = 0;
+		    pckt.tcpHdr.psh = 0;
+		    pckt.tcpHdr.ack = 0;
+		    pckt.tcpHdr.urg = 0;
+		    pckt.tcpHdr.ece = 0;
+		    pckt.tcpHdr.cwr = 0;
+		pckt.tcpHdr.window = htons(MSS);
+		pckt.tcpHdr.check = 0;
+		pckt.tcpHdr.urg_ptr = 0;
+       
 
 }
 int update_rtt(uint64_t s_rtt){
