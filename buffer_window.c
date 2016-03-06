@@ -14,17 +14,17 @@
 char servBuffer[MAX_BUFF];
 char cliBuffer[MAX_BUFF];
 
-char *servStart = &servBuffer[0];
-char *servEnd = &servBuffer[0];
-char *cliStart = &cliBuffer[0];
-char *cliEnd = &cliBuffer[0];
+int servStart = 0;
+int servEnd = 0;
+int cliStart = 0;
+int cliEnd = 0;
 int isBuffFull = 0; // Set to 1 if  full, 0 not full
 int bytesInBuff = 0; // used to see if buffer should be set to full, incremented by # of bytes added to buffer
 
 typedef struct Pkt_Info{
 	int seq_num;
 	int ack_flag;
-	char* pktStart;
+	int pktStart;
 	int sizeOfPkt;
 }Pkt_Info;
 
@@ -39,29 +39,30 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 		printf("The buffer is full!\n");
 	}else{
 		if(isBuffFull == 0 && (cliEnd + bytesToWrite) >= cliStart){
-			if((cliEnd+bytesToWrite) < (cliBuffer+MAX_BUFF)){
+			if((cliEnd+bytesToWrite) < MAX_BUFF){
 				//printf("The buffer is %s\n",pktBuffer);
-				printf("Value of cliEnd is %p\n",cliEnd);
+				printf("Value of cliEnd is %d\n",cliEnd);
 				bytesInBuff += bytesToWrite;
-				memcpy(&cliBuffer+*cliEnd,&pktBuffer,bytesToWrite);
-				cliEnd = cliEnd+bytesToWrite;
+				memcpy(cliBuffer+cliEnd,&pktBuffer,bytesToWrite);
+				cliEnd += bytesToWrite;
 				bytesWritten = bytesToWrite;
 				printf("Bytes in Buffer is %d\n",bytesInBuff);
-				printf("Value of cliEnd is %p\n",cliEnd);
-			}else if((cliEnd+bytesToWrite) == (cliBuffer+MAX_BUFF) && cliStart != &cliBuffer[0] ){
+				printf("Value of cliEnd is %d\n",cliEnd);
+			}else if((cliEnd+bytesToWrite) == (MAX_BUFF) && cliStart != 0 ){
 				bytesInBuff += bytesToWrite;
-				memcpy(&cliBuffer+*cliEnd,&pktBuffer,bytesToWrite);
-				cliEnd = &cliBuffer[0];
+				memcpy(cliBuffer+cliEnd,&pktBuffer,bytesToWrite);
+				cliEnd = 0;
 				bytesWritten = bytesToWrite;
-			}else if((cliEnd+bytesToWrite > cliBuffer+MAX_BUFF) && cliStart != &cliBuffer[0]){
-				int remainder = (int)((cliBuffer+MAX_BUFF) - cliEnd);
-				memcpy(&cliBuffer+*cliEnd,&pktBuffer,(cliBuffer+MAX_BUFF)-cliEnd);
-				memcpy(&cliBuffer,&pktBuffer,remainder);
-				cliEnd = &cliBuffer[0]+remainder;
-				bytesWritten = bytesToWrite;			
+			}else if((cliEnd+bytesToWrite > MAX_BUFF) && cliStart != 0){
+				int remainder = (MAX_BUFF - cliEnd);
+				memcpy(cliBuffer+cliEnd,&pktBuffer,(MAX_BUFF)-cliEnd);
+				memcpy(cliBuffer,&pktBuffer,remainder);
+				cliEnd = remainder;
+				bytesWritten = bytesToWrite;	
+				bytesInBuff += bytesToWrite;		
 			}else{
 				printf("shit is full!\n");
-				printf("Address for end of buffer should be: %p\n",&cliBuffer[0]+MAX_BUFF);
+				isBuffFull =1;
 			}
 		}
 	}
@@ -74,13 +75,28 @@ int readFromBufferC(char pktBuffer[],int seq_num){
 	if(isBuffFull == 0 && bytesInBuff == 0){
 		printf("The Buffer is empty!\n");
 	}else{
-		
+		printf("here2\n");
+		if(cliStart < MAX_BUFF){
+			memcpy(&pktBuffer,cliBuffer+cliStart,MSS);
+			printf("here3\n");
+			bytesInBuff -= MSS;
+			printf("%d",bytesInBuff);
+		}else if(cliStart+MSS > MAX_BUFF){
+			printf("here4\n");
+			int remainder = (MAX_BUFF - cliStart);			
+			memcpy(&pktBuffer,cliBuffer+cliStart,remainder);
+			memcpy(&pktBuffer+remainder,cliBuffer,MSS-remainder);
+			bytesInBuff -= remainder;
+			bytesInBuff -= MSS-remainder;
+			cliStart = remainder;
+		}
 	}
 	return 0;
 }
 
 int isBuffFilled(){
 	if(bytesInBuff >= MAX_BUFF){
+		isBuffFull = 1;
 		return 1;
 	}
 	return 0;

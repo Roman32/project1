@@ -72,10 +72,10 @@ typedef struct Packet{
 extern char servBuffer[MAX_BUFF];
 extern char cliBuffer[MAX_BUFF];
 
-extern char *servStart;
-extern char *servEnd;
-extern char *cliStart;
-extern char *cliEnd;
+extern int servStart;
+extern int servEnd;
+extern int cliStart;
+extern int cliEnd;
 extern int isBuffFull;
 extern int bytesInBuff;
 
@@ -257,6 +257,7 @@ int main(int argc, char argv[]){
 			
 			//printf("Bytes from client :%d\n",bytesIn);
 			if(isBuffFilled){
+				printf("here\n");
 				readFromBufferC(buffer,seq_num);
 			}			
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
