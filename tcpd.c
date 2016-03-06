@@ -266,6 +266,7 @@ int main(int argc, char argv[]){
 			seq_num++;	//increment seq# each time
 			pckt.tcpHdr.seq = seq_num; //set seq num;
 			pckt.tcpHdr.ack_seq = 0;
+            printf("Decoded bytes going in \n\n%s\n",buffer);
 			printf("Bytes written to buffer %d\n",writeToBufferC(bytesIn,buffer,seq_num));
 			
 			//printf("Bytes from client :%d\n",bytesIn);
@@ -273,7 +274,7 @@ int main(int argc, char argv[]){
 			
 			bzero(&buffer,sizeof(buffer));			
 			printf("Bytes read from buffer %d\n",readFromBufferC(buffer,bytesIn));
-			
+			printf("Decoded bytes coming out \n\n%s\n",buffer);
 			
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
@@ -282,6 +283,7 @@ int main(int argc, char argv[]){
 			
             		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
+            printf("\n\n");
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			//printf("Sent to the Troll: %d\n",bytesToTroll);
 			//sleep(1);
