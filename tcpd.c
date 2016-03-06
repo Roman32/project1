@@ -270,8 +270,9 @@ int main(int argc, char argv[]){
 			
 			//printf("Bytes from client :%d\n",bytesIn);
 			
-				printf("here\n");
-				readFromBufferC(buffer,seq_num);
+			printf("here\n");
+			bzero(&buffer,sizeof(buffer));
+			readFromBufferC(buffer,bytesIn);
 						
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum

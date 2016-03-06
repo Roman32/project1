@@ -64,34 +64,38 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				printf("shit is full! But not really!\n");
 				isBuffFull =1;
 			}
+		}else{
+			int remainder = (MAX_BUFF - cliEnd);
+			memcpy(cliBuffer+cliEnd,pktBuffer,remainder);
+			bytesWritten = remainder;
 		}
 	}
 	return bytesWritten;
 }
 
-int readFromBufferC(char pktBuffer[],int seq_num){
+int readFromBufferC(char pktBuffer[],int bytesOut){
 	int bytesRead = 0;
 	isBuffFull = isBuffFilled();
 	if(isBuffFull == 0 && bytesInBuff == 0){
 		printf("The Buffer is empty!\n");
 	}else{
 		if(cliStart < MAX_BUFF){
-			memcpy(pktBuffer,cliBuffer+cliStart,MSS);
+			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			printf("Data Starts at %d\n",cliStart);
-			cliStart+=MSS;
-			bytesInBuff -= MSS;
-			printf("%d",bytesInBuff);
-		}else if(cliStart+MSS > MAX_BUFF){
+			cliStart += bytesOut;
+			bytesInBuff -= bytesOut;
+			printf("Bytes remaining %d\n",bytesInBuff);
+		}else if(cliStart+bytesOut > MAX_BUFF){
 			printf("Data Starts at %d\n",cliStart);
 			int remainder = (MAX_BUFF - cliStart);			
 			memcpy(pktBuffer,cliBuffer+cliStart,remainder);
-			memcpy(pktBuffer+remainder,cliBuffer,MSS-remainder);
+			memcpy(pktBuffer+remainder,cliBuffer,bytesOut-remainder);
 			bytesInBuff -= remainder;
-			bytesInBuff -= MSS-remainder;
+			bytesInBuff -= bytesOut-remainder;
 			cliStart = remainder;
 			printf("%d",bytesInBuff);
-		}else if(cliStart+MSS == MAX_BUFF && cliEnd != 0){
-			memcpy(pktBuffer,cliBuffer+cliStart,MSS);
+		}else if(cliStart+bytesOut == MAX_BUFF && cliEnd != 0){
+			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			cliStart = 0;
 		}
 	}
