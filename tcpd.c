@@ -6,7 +6,7 @@
 #include <netinet/ip.h>
 #include <errno.h>
 #include <linux/tcp.h>
-
+#include <math.h>
 
 #include "globals.h"
 #include "buffer_window.h"
@@ -78,7 +78,9 @@ extern char *cliStart;
 extern char *cliEnd;
 extern int isBuffFull;
 extern int bytesInBuff;
-
+uint64_t est_rtt = 4000000; //4 seconds
+uint64_t rto = 4000000; //4 seconds
+double dev = 0.75;
 TrollHeader head;
 Packet pckt;
 Packet pcktS;
@@ -115,6 +117,12 @@ int main(int argc, char argv[]){
 	char bufferOut[1036];
 	char ackBuffer[36]; //36 = tcp header + troll header
 	uint32_t seq_num = 0;
+    	//for determining time at which sleep started
+	struct timeval start_time;
+		//when sleep ends, the time at which this occurs is stored here
+	struct timeval curr_time;
+		//for storing the result of curr_time - start_time
+	struct timeval result_time;
 	fd_set portUp;
 	//TrollHeader head;
 	//Packet pckt;
@@ -269,7 +277,7 @@ int main(int argc, char argv[]){
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 			//call calculate rtt
 			
-            send_to_timer(6,seq_num,1,0,timer_ssock,timer_send);
+            send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			//printf("Sent to the Troll: %d\n",bytesToTroll);
@@ -297,6 +305,11 @@ int main(int argc, char argv[]){
 			 //figure out where ack is in tcp header
 			 //call function to send a packet to timer to cancel timer for packet seq
 			 //call function to remove packet from buffer
+             int windowshifted =1;
+			 if(windowshifted == 1){
+				update_rtt(1);
+				printf("new rto is %f\n",rto);
+			 }
 		}
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
@@ -322,9 +335,9 @@ int main(int argc, char argv[]){
 			}
 			//put received info into buffer
 			//send ack to troll on server side
-			send_ack(pcktS.tcpHdr.seq,serverTrollSock,ackToServerTroll);
+			send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 
-
+            
 
 
 
@@ -436,5 +449,17 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 		perror("sending datagram message ack");
 		exit(4);
     	}*/
+
+}
+int update_rtt(uint64_t s_rtt){
+   double alpha = 7.0 / 8.0;
+   double small_delta = 1.0 / 4.0;
+   double mu = 1.0;
+   double phi = 4.0;
+   
+   double diff = s_rtt - est_rtt;
+   est_rtt = alpha * est_rtt + (1.0 - alpha) * s_rtt;
+   dev = dev + small_delta * (fabs(diff) - dev);
+   rto = mu * est_rtt + phi * dev;
 
 }
