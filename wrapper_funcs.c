@@ -30,13 +30,32 @@ int SOCKET(int domain,int type,int protocol){
 	return socket(AF_INET,SOCK_DGRAM,0);
 }
 /*Sets up the SEND call properly */
-ssize_t SEND(int socket,const void *buffer,size_t length,int flags){
+ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 	usleep(10000); /*Sleep for 10ms*/
 	struct sockaddr_in sock_addr;
 	sock_addr.sin_family = AF_INET;
 	sock_addr.sin_port = htons(TCPDIN);
 	sock_addr.sin_addr.s_addr = inet_addr(clientIP);
-	return sendto(socket,buffer,length,flags,(struct sockaddr*)&sock_addr,sizeof(sock_addr));
+	char x[20]; //dont really care what gets received
+
+	int sent = sendto(sock,buffer,length,flags,(struct sockaddr*)&sock_addr,sizeof(sock_addr));
+	//set up connection to recv a packet from tcpd letting SEND() know it is ok to return
+    struct sockaddr_in wait;
+	int wait_sock;
+    int addr_len = sizeof(wait);
+	wait_sock = socket(AF_INET, SOCK_DGRAM,0);
+	wait.sin_family = AF_INET;
+	wait.sin_port = htons(CPTLSENDRECVPORT);
+	wait.sin_addr.s_addr = 0;
+	if(bind(wait_sock,(struct sockaddr*)&wait,sizeof(wait)) < 0){
+		//perror("Failed to bind socket for wait comm SEND()\n");
+	}
+//currently receiving byte but some bug 
+    //this will make SEND() blocking until it receives packet from TCPD
+	//printf("waiting for bytes in SEND()\n");
+    //int wait_bytes = recvfrom(wait_sock,x,1,0,(struct sockaddr*)&wait,&addr_len);
+    
+	return sent;
 	
 }
 /*Sets up RECV call properly */
