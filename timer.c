@@ -143,9 +143,15 @@ int send_expr_notice(uint32_t s_num);
 
 
 int main(){
-  tcpd.sin_family = AF_INET;
-  tcpd.sin_port = htons(TCPDIN);
-  tcpd.sin_addr.s_addr = 0;
+  tcpd_out_sock = socket(AF_INET, SOCK_DGRAM,0);
+ if(tcpd_out_sock< 0) {
+	perror("opening datagram socket timer_ssock");
+	exit(2);
+    }
+	tcpd.sin_family = AF_INET;
+	tcpd.sin_port = htons(TIMERLPORT);
+	tcpd.sin_addr.s_addr = 0;
+ 
   fd_set portUp;
 	//for sleeping the program
 
@@ -534,7 +540,7 @@ int send_expr_notice(uint32_t s_num){
    s_num = htonl(s_num);
    memcpy(tcpd_buf,&s_num,4);
    int res = sendto(tcpd_out_sock, tcpd_buf,buffSize, 0, (struct sockaddr *)&tcpd, sizeof(tcpd));
-      //printf("res is %d\n",res);
+      printf("Sent packet to tpcd res is %d\n",res);
       if(res < 0) {
         perror("sending datagram message");
         exit(4);

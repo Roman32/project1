@@ -6,7 +6,7 @@
 #include <netinet/ip.h>
 #include <errno.h>
 #include <linux/tcp.h>
-
+#include <math.h>
 
 #include "globals.h"
 #include "buffer_window.h"
@@ -78,7 +78,9 @@ extern int cliStart;
 extern int cliEnd;
 extern int isBuffFull;
 extern int bytesInBuff;
-
+uint64_t est_rtt = 4000000; //4 seconds
+uint64_t rto = 4000000; //4 seconds
+double dev = 0.75;
 TrollHeader head;
 Packet pckt;
 Packet pcktS;
@@ -115,6 +117,12 @@ int main(int argc, char argv[]){
 	char bufferOut[1036];
 	char ackBuffer[36]; //36 = tcp header + troll header
 	uint32_t seq_num = 0;
+    	//for determining time at which sleep started
+	struct timeval start_time;
+		//when sleep ends, the time at which this occurs is stored here
+	struct timeval curr_time;
+		//for storing the result of curr_time - start_time
+	struct timeval result_time;
 	fd_set portUp;
 	//TrollHeader head;
 	//Packet pckt;
@@ -148,17 +156,22 @@ int main(int argc, char argv[]){
 
 	/* Setup for tcpd sending to timer */
 	timer_ssock = socket(AF_INET, SOCK_DGRAM,0);
+ if(timer_ssock< 0) {
+	perror("opening datagram socket timer_ssock");
+	exit(2);
+    }
 	timer_send.sin_family = AF_INET;
-	timer_send.sin_port = htonl(TIMERPORT);
+	timer_send.sin_port = htons(TIMERPORT);
 	timer_send.sin_addr.s_addr = 0;
-	if(bind(timer_ssock,(struct sockaddr*)&timer_send,sizeof(timer_send)) < 0){
+    //only need to bind port if we are listening
+	/*if(bind(timer_ssock,(struct sockaddr*)&timer_send,sizeof(timer_send)) < 0){
 		perror("Failed to bind socket for timer comm.poo1\n");
-	}
+	}*/
 
   /* setup for tcpd listeing for packet from timer */
 	timer_lsock = socket(AF_INET, SOCK_DGRAM,0);
 	timer_listen.sin_family = AF_INET;
-	timer_listen.sin_port = htonl(TIMERLPORT);
+	timer_listen.sin_port = htons(TIMERLPORT);
 	timer_listen.sin_addr.s_addr = 0;
 	if(bind(timer_lsock,(struct sockaddr*)&timer_listen,sizeof(timer_listen)) < 0){
 		perror("Failed to bind socket for timer comm.poo2\n");
@@ -175,13 +188,13 @@ int main(int argc, char argv[]){
 	/* set up sock to send ack to server troll */
     
 
-	serverTrollSock = socket(AF_INET,SOCK_DGRAM,0);
+	//serverTrollSock = socket(AF_INET,SOCK_DGRAM,0);
 	ackToServerTroll.sin_family = AF_INET;
 	ackToServerTroll.sin_port = htons(STROLLPORT);
 	ackToServerTroll.sin_addr.s_addr = inet_addr("0");
-	if(bind(serverTrollSock,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll)) < 0){
+	/*if(bind(serverTrollSock,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll)) < 0){
 		perror("Failed to bind socket for ackToServerTroll comm.\n");
-	}
+	}*/
 
 
 
@@ -264,7 +277,8 @@ int main(int argc, char argv[]){
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 			//call calculate rtt
-
+			
+            send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			//printf("Sent to the Troll: %d\n",bytesToTroll);
@@ -278,6 +292,7 @@ int main(int argc, char argv[]){
 			int timer_bytes_in = recvfrom(timer_lsock,timerBuffer,sizeof(uint32_t),0,(struct sockaddr*)&timer_listen,&addr_len);
 			uint32_t inc_seq_num;
 			memcpy(&inc_seq_num,&timer_bytes_in,4);
+			printf("Received a packet from timer. seq num %d\n",seq_num);
 			//timer for ntohl(inc_seq_num) timed out resend packet
 
 		}
@@ -291,6 +306,11 @@ int main(int argc, char argv[]){
 			 //figure out where ack is in tcp header
 			 //call function to send a packet to timer to cancel timer for packet seq
 			 //call function to remove packet from buffer
+             int windowshifted =1;
+			 if(windowshifted == 1){
+				update_rtt(1);
+				printf("new rto is %f\n",rto);
+			 }
 		}
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
@@ -316,9 +336,9 @@ int main(int argc, char argv[]){
 			}
 			//put received info into buffer
 			//send ack to troll on server side
-			send_ack(pcktS.tcpHdr.seq,serverTrollSock,ackToServerTroll);
+			send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 
-
+            
 
 
 
@@ -331,6 +351,7 @@ int main(int argc, char argv[]){
 		FD_SET(sockIn, &portUp);
 		FD_SET(sockOut, &portUp);
 		FD_SET(timer_lsock,&portUp);
+        FD_SET(ackFserverSock,&portUp);
 	}
 
 	return 0;
@@ -376,7 +397,7 @@ unsigned short checksum(char *data_p, int length)
 }
 
 void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t tv_usec,int sock,struct sockaddr_in name){
-
+    
 	int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
 	//printf("buffsize is %d\n",buffSize);
 	printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
@@ -391,9 +412,9 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
 	memcpy(cli_buf+1,&seq_num,4);
 	memcpy(cli_buf+5,&tv_sec,8);
 	memcpy(cli_buf+13,&tv_usec,8);
-
+    
 	int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
-    	//printf("res is %d\n",res);
+    	printf("res is %d\n",res);
     	if(res <0) {
 		perror("sending datagram message");
 		exit(4);
@@ -401,11 +422,12 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
 }
 
 void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToServerTroll){
-	
+	printf("ack for seq_num %d sent\n",seq_num);
 	//build tcp ack header
 	//send without body (ack seq is in tcp header)
 
 		/*Packet to Troll*/
+/*
 		memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
 		memcpy(&pckt.tcpHdr.source,&server.sin_port,sizeof(server.sin_port));
 		memcpy(&pckt.tcpHdr.dest,&ackToServerTroll.sin_port,sizeof(ackToServerTroll.sin_port));
@@ -427,6 +449,18 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
     	if(bytesToTroll < 0) {
 		perror("sending datagram message ack");
 		exit(4);
-    	}
+    	}*/
+
+}
+int update_rtt(uint64_t s_rtt){
+   double alpha = 7.0 / 8.0;
+   double small_delta = 1.0 / 4.0;
+   double mu = 1.0;
+   double phi = 4.0;
+   
+   double diff = s_rtt - est_rtt;
+   est_rtt = alpha * est_rtt + (1.0 - alpha) * s_rtt;
+   dev = dev + small_delta * (fabs(diff) - dev);
+   rto = mu * est_rtt + phi * dev;
 
 }
