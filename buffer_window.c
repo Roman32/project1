@@ -68,7 +68,7 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 			}else if((cliEnd+bytesToWrite > MAX_BUFF && cliStart == 0)){
 				int remainder = (MAX_BUFF - cliEnd);
 				memcpy(cliBuffer+cliEnd,pktBuffer,(MAX_BUFF)-cliEnd);
-				cliEnd = MAX_BUFF;
+				cliEnd = 0;
 				bytesInBuff += remainder;
 				bytesWritten = remainder;
 				isBuffFull =1;
@@ -89,8 +89,8 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 		printf("The Buffer is empty!\n");
 	}else{
 		if(cliStart+bytesOut < MAX_BUFF){
-			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			printf("1Data Starts at %d\n",cliStart);
+			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			cliStart += bytesOut;
 			bytesInBuff -= bytesOut;
 			bytesRead = bytesOut;
