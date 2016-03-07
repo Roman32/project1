@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <linux/tcp.h>
 #include <math.h>
-
+#include <inttypes.h>
 #include "globals.h"
 #include "buffer_window.h"
 
@@ -56,6 +56,7 @@ struct sockaddr_in timer_listen;
 struct sockaddr_in timer_send;
 struct sockaddr_in ackFromServer;
 struct sockaddr_in ackToServerTroll;
+struct sockaddr_in cplt_send;
 
 typedef struct TrollHeader{
 	struct sockaddr_in header;
@@ -78,9 +79,16 @@ extern int cliStart;
 extern int cliEnd;
 extern int isBuffFull;
 extern int bytesInBuff;
-uint64_t est_rtt = 4000000; //4 seconds
-uint64_t rto = 4000000; //4 seconds
-double dev = 0.75;
+uint64_t rto = 3000000;
+float dev = 0;
+float est_rtt = 4000000;
+int first_rto_calc = 1;
+float alpha = 7.0 / 8.0;
+float small_delta = 1.0 / 8.0;
+float mu = 1.0;
+float phi = 4.0;
+float diff = 0;
+
 TrollHeader head;
 Packet pckt;
 Packet pcktS;
@@ -93,6 +101,8 @@ void send_to_timer(uint8_t packet_type,
 	struct sockaddr_in name);
 
 void send_ack(uint32_t seq_num, int sock, struct sockaddr_in ackToServerTroll);
+
+void send_to_SEND(int sock, struct sockaddr_in name);
 
 unsigned short checksum(char *data_p, int length);
 
@@ -196,7 +206,9 @@ int main(int argc, char argv[]){
 		perror("Failed to bind socket for ackToServerTroll comm.\n");
 	}*/
 
-
+    cplt_send.sin_family = AF_INET;
+	cplt_send.sin_port = htons(CPTLSENDRECVPORT);
+    cplt_send.sin_addr.s_addr = 0;
 
 
 	head.header.sin_family = htons(AF_INET);
@@ -254,6 +266,7 @@ int main(int argc, char argv[]){
 	FD_SET(ackFserverSock,&portUp);
 
 	while(1){
+        fflush(stdout);
 		if(select(FD_SETSIZE,&portUp,NULL,NULL,NULL)){
 			//perror("select");
 		}
@@ -266,16 +279,22 @@ int main(int argc, char argv[]){
 			seq_num++;	//increment seq# each time
 			pckt.tcpHdr.seq = seq_num; //set seq num;
 			pckt.tcpHdr.ack_seq = 0;
-			printf("%s\n",buffer);
+
+            //printf("Decoded bytes going in \n\n%s\n",buffer);
+
 			printf("Bytes written to buffer %d\n",writeToBufferC(bytesIn,buffer,seq_num));
 
 			//printf("Bytes from client :%d\n",bytesIn);
-			
+			printf("here\n");
 			
 			bzero(&buffer,sizeof(buffer));			
 			printf("Bytes read from buffer %d\n",readFromBufferC(buffer,bytesIn));
-			printf("%s\n",buffer);
+
+			//printf("Decoded bytes coming out \n\n%s\n",buffer);
 			
+			//check that bytes were written fully then send message to SEND() letting 
+			//it know that it is ok to send another packet
+
 			memcpy(&pckt.payload,&buffer,MSS);	//copies bytes from client to payload of packet
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
@@ -283,10 +302,12 @@ int main(int argc, char argv[]){
 			
             		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
+            printf("\n\n");
 			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 			//printf("Sent to the Troll: %d\n",bytesToTroll);
-			sleep(5);
-					
+			//sleep(1);
+            //send at the end
+			send_to_SEND(sockIn,cplt_send);		
 		}
 		//receiving from timer
 		if(FD_ISSET(timer_lsock,&portUp)){
@@ -312,9 +333,11 @@ int main(int argc, char argv[]){
 			 //call function to remove packet from buffer
              int windowshifted =1;
 			 if(windowshifted == 1){
-				update_rtt(1);
-				printf("new rto is %f\n",rto);
+				
+				update_rtt(1000000);
+				printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
 			 }
+              send_to_SEND(sockIn,cplt_send);	
 		}
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
@@ -400,6 +423,21 @@ unsigned short checksum(char *data_p, int length)
       return (crc);
 }
 
+void send_to_SEND(int sock, struct sockaddr_in name){
+	printf("send to send called\n");
+	int buffSize = sizeof(uint8_t);
+	char *cli_buf = malloc(buffSize);
+    bzero(cli_buf,buffSize);
+	uint8_t packet_type = 13;
+	memcpy(cli_buf,&packet_type,1);
+    int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+    	printf("res is %d\n",res);
+    	if(res <0) {
+		perror("sending datagram message send_to_SEND");
+		exit(4);
+    	}
+}
+
 void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t tv_usec,int sock,struct sockaddr_in name){
     
 	int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
@@ -481,14 +519,13 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 
 }
 int update_rtt(uint64_t s_rtt){
-   double alpha = 7.0 / 8.0;
-   double small_delta = 1.0 / 4.0;
-   double mu = 1.0;
-   double phi = 4.0;
-   
-   double diff = s_rtt - est_rtt;
+  
+   diff = s_rtt - est_rtt;
+   //printf("diff is %f\n",diff);
    est_rtt = alpha * est_rtt + (1.0 - alpha) * s_rtt;
+   //printf("est_rtt is %f\n",est_rtt);
    dev = dev + small_delta * (fabs(diff) - dev);
+   //printf("dev is %f\n",dev );
    rto = mu * est_rtt + phi * dev;
 
 }

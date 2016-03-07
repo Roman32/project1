@@ -59,7 +59,17 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 			}else if((cliEnd+bytesToWrite > MAX_BUFF) && cliStart != 0){
 				int remainder = (MAX_BUFF - cliEnd);
 				memcpy(cliBuffer+cliEnd,pktBuffer,(MAX_BUFF)-cliEnd);
-				memcpy(cliBuffer,pktBuffer,remainder);
+
+                char t[(MAX_BUFF)-cliEnd];
+				memcpy(t,pktBuffer,(MAX_BUFF)-cliEnd);
+                printf("buff_window first split %s\n",t);
+
+				memcpy(cliBuffer,pktBuffer + (MAX_BUFF)-cliEnd,remainder);
+                
+     			 char t2[remainder];
+				memcpy(t2,pktBuffer + (MAX_BUFF)-cliEnd,remainder);
+                printf("buff_window second split %s\n",t2);
+
 				cliEnd = bytesToWrite - remainder;
 				bytesWritten = bytesToWrite;	
 				bytesInBuff += bytesToWrite;	
@@ -78,6 +88,7 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 			}
 		}
 	}
+    
 	return bytesWritten;
 }
 
@@ -113,6 +124,7 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}
 	}
+   
 	return bytesRead;
 }
 
