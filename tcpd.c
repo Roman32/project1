@@ -334,7 +334,7 @@ int main(int argc, char argv[]){
 			 memcpy(&p.trollhdr,bufferOut,sizeof(struct TrollHeader)); //Copy troll header to recieved packet troll header, not really needed.
 			 memcpy(&p.tcpHdr,bufferOut+16,sizeof(struct tcphdr)); //copy tcpHdr
 
-			 uint32_t ack_num = p.tcpHdr.seq;
+			 uint32_t ack_num = p.tcpHdr.ack_seq;
              printf("ack num is %d\n",ack_num);
 			 //figure out where ack is in tcp header
 
