@@ -349,13 +349,18 @@ int main(int argc, char argv[]){
 			memcpy(&pcktS.payload,bufferOut+36,bytes-36); //copy of the payload
 			printf("Bytes recv from troll %d\n",bytes);
 			uint16_t checkRecv = pcktS.tcpHdr.check; //set recved checksum value to a temp value
-			printf("Check recvd %hu\n",checkRecv);
+			//printf("Check recvd %hu\n",checkRecv);
 			pcktS.tcpHdr.check = 0; //zero out checksum
 			uint16_t check = checksum((char *)&pcktS+16,sizeof(struct tcphdr)+bytes-36); //recompute checksum to see if packet was garbled.
 			if(check == checkRecv){
 				printf("Checksum is *****SAME***** for packet %d\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %hu\n",checkRecv);
 				printf("Checksum calculated is %hu\n",check);
+				writeToBufferC(bytes-36,bufferOut+36,0);
+				bzero(&bufferOut,sizeof(bufferOut));
+				char toServer[MSS];
+				readFromBufferC(toServer,bytes-36);
+				bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 			}else{
 				printf("Checksum is **********DIFFERENT********** for packet %u\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %hu\n",checkRecv);
@@ -371,7 +376,7 @@ int main(int argc, char argv[]){
 
 
 			//send bytes to server
-			bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+			//bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 			printf("Bytes sent to server:%d\n",bytesToServ);
 		}
 		FD_ZERO(&portUp);

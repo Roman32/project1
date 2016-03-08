@@ -115,33 +115,23 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				memcpy(cliBuffer+cliEnd,pktBuffer,bytesToWrite);
 				cliEnd += bytesToWrite;
 				bytesWritten = bytesToWrite;
-				printf("1Bytes in Buffer is %d\n",bytesInBuff);
+				printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite) == (MAX_BUFF)){
 				bytesInBuff += bytesToWrite;
 				memcpy(cliBuffer+cliEnd,pktBuffer,bytesToWrite);
 				cliEnd = 0;
 				bytesWritten = bytesToWrite;
-				printf("2Bytes in Buffer is %d\n",bytesInBuff);
+				printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite > MAX_BUFF) && cliStart != 0){
 				int remainder = (MAX_BUFF - cliEnd);
 				memcpy(cliBuffer+cliEnd,pktBuffer,(MAX_BUFF)-cliEnd);
-
-                char t[(MAX_BUFF)-cliEnd];
-				memcpy(t,pktBuffer,(MAX_BUFF)-cliEnd);
-                printf("buff_window first split %s\n",t);
-
 				memcpy(cliBuffer,pktBuffer + (MAX_BUFF)-cliEnd,remainder);
-                
-     			 char t2[remainder];
-				memcpy(t2,pktBuffer + (MAX_BUFF)-cliEnd,remainder);
-                printf("buff_window second split %s\n",t2);
-
 				cliEnd = bytesToWrite - remainder;
 				bytesWritten = bytesToWrite;	
 				bytesInBuff += bytesToWrite;	
-				printf("3Bytes in Buffer is %d\n",bytesInBuff);
+				printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite > MAX_BUFF && cliStart == 0)){
 				int remainder = (MAX_BUFF - cliEnd);
@@ -150,7 +140,7 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				bytesInBuff += remainder;
 				bytesWritten = remainder;
 				isBuffFull =1;
-				printf("4Bytes in Buffer is %d\n",bytesInBuff);
+				printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 				printf("Value of isBuffFull %d\n",isBuffFull);
 			}
@@ -168,14 +158,14 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 		printf("The Buffer is empty!\n");
 	}else{
 		if(cliStart+bytesOut < MAX_BUFF){
-			printf("1Data Starts at %d\n",cliStart);
+			printf("Data Starts at %d\n",cliStart);
 			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			cliStart += bytesOut;
 			bytesInBuff -= bytesOut;
 			bytesRead = bytesOut;
 			printf("Bytes remaining %d\n",bytesInBuff);
 		}else if(cliStart+bytesOut > MAX_BUFF && cliEnd != 0){
-			printf("2Data Starts at %d\n",cliStart);
+			printf("Data Starts at %d\n",cliStart);
 			int remainder = (MAX_BUFF - cliStart);			
 			memcpy(pktBuffer,cliBuffer+cliStart,remainder);
 			memcpy(pktBuffer+remainder,cliBuffer,bytesOut-remainder);
@@ -184,7 +174,7 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 			bytesRead = bytesOut;
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}else if(cliStart+bytesOut == MAX_BUFF && cliEnd != 0){
-			printf("3Data Starts at %d\n",cliStart);
+			printf("Data Starts at %d\n",cliStart);
 			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			cliStart = 0;
 			bytesRead = bytesOut;
