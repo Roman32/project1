@@ -63,7 +63,7 @@ int removeFromCWindow(int seq_num){
 	}
    int i;
    for (i = 0; i < 20; i++){
-   	 if(cliWindow[i].seq_num = seq_num){
+   	 if(cliWindow[i].seq_num == seq_num){
    	 	numberOfPacketsInWindow--;   
    	 	cliWindow[i].ack_flag = 1;  // set this to one so we know we can override it
    	 	cliWindow[i].pktStart = -1; //prevent some errors i think
