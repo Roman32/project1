@@ -333,13 +333,13 @@ int main(int argc, char argv[]){
 			 Packet p;
 			 memcpy(&p.trollhdr,bufferOut,sizeof(struct TrollHeader)); //Copy troll header to recieved packet troll header, not really needed.
 			 memcpy(&p.tcpHdr,bufferOut+16,sizeof(struct tcphdr)); //copy tcpHdr
-             printf("ack num is %d\n",p.tcpHdr.ack_seq);
+             printf("ack num is %d\n",ntohs(p.tcpHdr.ack_seq));
 			 //figure out where ack is in tcp header
 
 			 //call function to send a packet to timer to cancel timer for packet seq
-             send_to_timer(7,p.tcpHdr.ack_seq,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+             send_to_timer(7,ntohs(p.tcpHdr.ack_seq),rto / 1000000,rto % 1000000,timer_ssock,timer_send);
              //call function to remove packet from buffer
-			 if(removeFromCWindow(p.tcpHdr.ack_seq) > 0){
+			 if(removeFromCWindow(ntohs(p.tcpHdr.ack_seq)) > 0){
 				
 				update_rtt(1000000);
 				printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
