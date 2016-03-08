@@ -66,11 +66,12 @@ int removeFromCWindow(int seq_num){
    	 if(cliWindow[i].seq_num == seq_num){
    	 	numberOfPacketsInWindow--;   
    	 	cliWindow[i].ack_flag = 1;  // set this to one so we know we can override it
-   	 	cliWindow[i].pktStart = -1; //prevent some errors i think
+   	 	cliWindow[i].pktStart = -1;
+   	 	 //prevent some errors i think
    	 	//if this packet was the first packet in our window then we can move the start of packetBlock
    	 	if( i == windowStartOfPacketBlock){
    	 		windowStartOfPacketBlock++; // only want to move the start of window if all packets before start have been acked
-
+   	 		i++;
    	 		int j;
    	 		for(j = i; j < 20; j++){
    	 			//if packet has not been acked
@@ -89,11 +90,13 @@ int removeFromCWindow(int seq_num){
 
 
 int isCWindowFull(){
+	printf("numberOfPacketsInWindow is %d\n",numberOfPacketsInWindow);
 	if(windowStartOfPacketBlock == windowEndOfPacketBlockPlusOne){
-		if(numberOfPacketsInWindow == 0){
-			return -1; //window is completly empty
+		if(numberOfPacketsInWindow < 20){
+			return 0; //window is completly empty
+		}else{ 
+			return 1;
 		}
-		return 1; //window is full
 	}else{
 		return 0; //window has room
 	}
