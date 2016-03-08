@@ -62,6 +62,7 @@ int removeFromCWindow(int seq_num){
 		return -1;
 	}
    int i;
+   int shift_amount = 0;
    for (i = 0; i < 20; i++){
    	 if(cliWindow[i].seq_num == seq_num){
    	 	numberOfPacketsInWindow--;   
@@ -70,6 +71,7 @@ int removeFromCWindow(int seq_num){
    	 	 //prevent some errors i think
    	 	//if this packet was the first packet in our window then we can move the start of packetBlock
    	 	if( i == windowStartOfPacketBlock){
+   	 		shift_amount++;
    	 		windowStartOfPacketBlock++; // only want to move the start of window if all packets before start have been acked
    	 		i++;
    	 		int j;
@@ -79,6 +81,7 @@ int removeFromCWindow(int seq_num){
    	 				break;
    	 			}else{ //continue moving the start of packet block up;
    	 				windowStartOfPacketBlock++;
+   	 				shift_amount++;
    	 			}
 
    	 		}
@@ -86,6 +89,7 @@ int removeFromCWindow(int seq_num){
 
    	 }
    }
+   return shift_amount;
 }
 
 
