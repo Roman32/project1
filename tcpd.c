@@ -302,14 +302,14 @@ int main(int argc, char argv[]){
 			
             send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
-            if(insertIntoCWindow(seq_num,0,cliStart,1000) == 1){
+            //if(insertIntoCWindow(seq_num,0,cliStart,1000) == 1){
             	printf("\n\n");
 				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 				//printf("Sent to the Troll: %d\n",bytesToTroll);
 				//sleep(1);
 	            //send at the end
 				send_to_SEND(sockIn,cplt_send);	
-            }
+            //}
            	
 		}
 		//receiving from timer
