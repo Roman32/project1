@@ -71,5 +71,5 @@ ssize_t RECV(int socket,const void *buffer,size_t length,int flags){
 
 
 int CLOSE(int socket){
-
+	return close(socket);
 }
