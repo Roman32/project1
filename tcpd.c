@@ -300,14 +300,17 @@ int main(int argc, char argv[]){
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 			//call calculate rtt
 			
-            		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+            send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
-            printf("\n\n");
-			bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
-			//printf("Sent to the Troll: %d\n",bytesToTroll);
-			//sleep(1);
-            //send at the end
-			send_to_SEND(sockIn,cplt_send);		
+            //if(insertIntoCWindow(seq_num,0,cliStart,1000) == 1){
+            	printf("\n\n");
+				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
+				//printf("Sent to the Troll: %d\n",bytesToTroll);
+				//sleep(1);
+	            //send at the end
+				send_to_SEND(sockIn,cplt_send);	
+            //}
+           	
 		}
 		//receiving from timer
 		if(FD_ISSET(timer_lsock,&portUp)){
@@ -327,12 +330,18 @@ int main(int argc, char argv[]){
 			 int addr_len = sizeof(ackFromServer);
 			 int ack_bytes_in = recvfrom(ackFserverSock,ackBuffer,36,0,(struct sockaddr*)&ackFromServer,&addr_len);
 			 printf("received ack bytes %d\n",ack_bytes_in);
-             //prtinf("ack num is %d\n",ackBuffer.????);
+			 Packet p;
+			 memcpy(&p.trollhdr,bufferOut,sizeof(struct TrollHeader)); //Copy troll header to recieved packet troll header, not really needed.
+			 memcpy(&p.tcpHdr,bufferOut+16,sizeof(struct tcphdr)); //copy tcpHdr
+
+			 uint32_t ack_num = p.tcpHdr.ack_seq;
+             printf("ack num is %d\n",ack_num);
 			 //figure out where ack is in tcp header
+
 			 //call function to send a packet to timer to cancel timer for packet seq
-			 //call function to remove packet from buffer
-             int windowshifted =1;
-			 if(windowshifted == 1){
+             send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+             //call function to remove packet from buffer
+			 if(removeFromCWindow(ack_num) > 0){
 				
 				update_rtt(1000000);
 				printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
@@ -481,7 +490,7 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 		memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
 		memcpy(&pckt.tcpHdr.source,&server.sin_port,sizeof(server.sin_port));
 		memcpy(&pckt.tcpHdr.dest,&ackToServerTroll.sin_port,sizeof(ackToServerTroll.sin_port));
-        
+        pckt.tcpHdr.ack_seq = seq_num;
 		pckt.tcpHdr.res1 = 0;
 		pckt.tcpHdr.doff = 5;
 		pckt.tcpHdr.fin = 0;
