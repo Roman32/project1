@@ -9,8 +9,11 @@
 #include "wrapper_funcs.h"
 #include "globals.h"
 
-
-
+#define MAX_BUFF 64000;
+extern int bytesInBuff;
+extern Pkt_Info serWindow[20];
+extern Pkt_Info cliWindow[20];
+extern cliBuffer[MAX_BUFF];
 /* NULL FUNCTION */
 int CONNECT(int socket,const struct sockaddr *address,socklen_t address_len){
 	return 0;
