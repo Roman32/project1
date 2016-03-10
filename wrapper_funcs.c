@@ -9,11 +9,21 @@
 #include "wrapper_funcs.h"
 #include "globals.h"
 
+typedef struct Pkt_Info{
+	int seq_num;
+	int ack_flag;
+	int pktStart;
+	int sizeOfPkt;
+}Pkt_Info;
+/*
 #define MAX_BUFF 64000;
 extern int bytesInBuff;
 extern Pkt_Info serWindow[20];
 extern Pkt_Info cliWindow[20];
-extern cliBuffer[MAX_BUFF];
+extern char cliBuffer[MAX_BUFF];
+extern long fileSize;
+extern int totalRecv;
+*/
 /* NULL FUNCTION */
 int CONNECT(int socket,const struct sockaddr *address,socklen_t address_len){
 	return 0;
@@ -43,9 +53,9 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 
 	int sent = sendto(sock,buffer,length,flags,(struct sockaddr*)&sock_addr,sizeof(sock_addr));
 	//set up connection to recv a packet from tcpd letting SEND() know it is ok to return
-    struct sockaddr_in wait;
+   	struct sockaddr_in wait;
 	int wait_sock;
-    int addr_len = sizeof(wait);
+    	int addr_len = sizeof(wait);
 	wait_sock = socket(AF_INET, SOCK_DGRAM,0);
 	wait.sin_family = AF_INET;
 	wait.sin_port = htons(CPTLSENDRECVPORT);
@@ -53,10 +63,10 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 	if(bind(wait_sock,(struct sockaddr*)&wait,sizeof(wait)) < 0){
 		//perror("Failed to bind socket for wait comm SEND()\n");
 	}
-//currently receiving byte but some bug 
-    //this will make SEND() blocking until it receives packet from TCPD
+	//currently receiving byte but some bug 
+   	//this will make SEND() blocking until it receives packet from TCPD
 	//printf("waiting for bytes in SEND()\n");
-    //int wait_bytes = recvfrom(wait_sock,x,1,0,(struct sockaddr*)&wait,&addr_len);
+    	//int wait_bytes = recvfrom(wait_sock,x,1,0,(struct sockaddr*)&wait,&addr_len);
     
 	return sent;
 	
@@ -74,5 +84,5 @@ ssize_t RECV(int socket,const void *buffer,size_t length,int flags){
 
 
 int CLOSE(int socket){
-	return close(socket);
+		return close(socket);
 }

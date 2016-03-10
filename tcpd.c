@@ -166,7 +166,7 @@ int main(int argc, char argv[]){
 
 	/* Setup for tcpd sending to timer */
 	timer_ssock = socket(AF_INET, SOCK_DGRAM,0);
- if(timer_ssock< 0) {
+    if(timer_ssock< 0) {
 	perror("opening datagram socket timer_ssock");
 	exit(2);
     }
@@ -187,7 +187,7 @@ int main(int argc, char argv[]){
 		perror("Failed to bind socket for timer comm.poo2\n");
 	}
     /* set up sock to receive acks from server troll */
-    ackFserverSock = socket(AF_INET, SOCK_DGRAM,0);
+    	ackFserverSock = socket(AF_INET, SOCK_DGRAM,0);
 	ackFromServer.sin_family = AF_INET;
 	ackFromServer.sin_port = htons(ACKRPORT);
 	ackFromServer.sin_addr.s_addr = 0;
@@ -206,9 +206,9 @@ int main(int argc, char argv[]){
 		perror("Failed to bind socket for ackToServerTroll comm.\n");
 	}*/
 
-    cplt_send.sin_family = AF_INET;
+    	cplt_send.sin_family = AF_INET;
 	cplt_send.sin_port = htons(CPTLSENDRECVPORT);
-    cplt_send.sin_addr.s_addr = 0;
+    	cplt_send.sin_addr.s_addr = 0;
 
 
 	head.header.sin_family = htons(AF_INET);
@@ -280,7 +280,7 @@ int main(int argc, char argv[]){
 			pckt.tcpHdr.seq = seq_num; //set seq num;
 			pckt.tcpHdr.ack_seq = 0;
 
-            //printf("Decoded bytes going in \n\n%s\n",buffer);
+            		//printf("Decoded bytes going in \n\n%s\n",buffer);
 
 			printf("Bytes written to buffer %d\n",writeToBufferC(bytesIn,buffer,seq_num));
 
@@ -300,10 +300,10 @@ int main(int argc, char argv[]){
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 			//call calculate rtt
 			
-            send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+            		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
-            //if(insertIntoCWindow(seq_num,0,cliStart,1000) == 1){
-            	printf("\n\n");
+            		//if(insertIntoCWindow(seq_num,0,cliStart,1000) == 1){
+            		printf("\n\n");
 				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 				//printf("Sent to the Troll: %d\n",bytesToTroll);
 				//sleep(1);
@@ -326,7 +326,7 @@ int main(int argc, char argv[]){
 		//receiving from tcpd server side acks
 		if(FD_ISSET(ackFserverSock,&portUp)){
 			 printf("received ack port activity\n");
-       	     bzero(&ackBuffer,sizeof(ackBuffer));
+       	     		bzero(&ackBuffer,sizeof(ackBuffer));
 			 int addr_len = sizeof(ackFromServer);
 			 int ack_bytes_in = recvfrom(ackFserverSock,ackBuffer,36,0,(struct sockaddr*)&ackFromServer,&addr_len);
 			 printf("received ack bytes %d\n",ack_bytes_in);
@@ -335,12 +335,12 @@ int main(int argc, char argv[]){
 			 memcpy(&p.tcpHdr,bufferOut+16,sizeof(struct tcphdr)); //copy tcpHdr
 
 			 uint32_t ack_num = p.tcpHdr.ack_seq;
-             printf("ack num is %d\n",ack_num);
+             		 printf("ack num is %d\n",ack_num);
 			 //figure out where ack is in tcp header
 
 			 //call function to send a packet to timer to cancel timer for packet seq
-             send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
-             //call function to remove packet from buffer
+             		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+             		 //call function to remove packet from buffer
 			 if(removeFromCWindow(ack_num) > 0){
 				
 				update_rtt(1000000);
@@ -370,19 +370,14 @@ int main(int argc, char argv[]){
 				char toServer[MSS];
 				readFromBufferC(toServer,bytes-36);
 				bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+				//put received info into buffer
+				//send ack to troll on server side
+				send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 			}else{
 				printf("Checksum is **********DIFFERENT********** for packet %u\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %hu\n",checkRecv);
 				printf("Checksum calculated is %hu\n",check);
-			}
-			//put received info into buffer
-			//send ack to troll on server side
-			send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
-
-            
-
-
-
+			}  
 
 			//send bytes to server
 			//bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
@@ -437,14 +432,15 @@ unsigned short checksum(char *data_p, int length)
       return (crc);
 }
 
+
 void send_to_SEND(int sock, struct sockaddr_in name){
 	printf("send to send called\n");
 	int buffSize = sizeof(uint8_t);
 	char *cli_buf = malloc(buffSize);
-    bzero(cli_buf,buffSize);
+    	bzero(cli_buf,buffSize);
 	uint8_t packet_type = 13;
 	memcpy(cli_buf,&packet_type,1);
-    int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
+   	int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
     	printf("res is %d\n",res);
     	if(res <0) {
 		perror("sending datagram message send_to_SEND");
@@ -483,14 +479,14 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 	//send without body (ack seq is in tcp header)
 
 		/*Packet to Troll*/
-        head.header.sin_family = htons(AF_INET);
+        	head.header.sin_family = htons(AF_INET);
 		head.header.sin_addr.s_addr = inet_addr(clientIP);
 		head.header.sin_port = htons(ACKRPORT);
 
 		memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
 		memcpy(&pckt.tcpHdr.source,&server.sin_port,sizeof(server.sin_port));
 		memcpy(&pckt.tcpHdr.dest,&ackToServerTroll.sin_port,sizeof(ackToServerTroll.sin_port));
-        pckt.tcpHdr.ack_seq = seq_num;
+        	pckt.tcpHdr.ack_seq = seq_num;
 		pckt.tcpHdr.res1 = 0;
 		pckt.tcpHdr.doff = 5;
 		pckt.tcpHdr.fin = 0;
@@ -505,27 +501,27 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 		pckt.tcpHdr.check = 0;
 		pckt.tcpHdr.urg_ptr = 0;
 		int bytesToTroll = sendto(serverTrollSock,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)),0,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll));
-    	printf("res in ack send is %d\n",bytesToTroll);
+    		printf("res in ack send is %d\n",bytesToTroll);
     	if(bytesToTroll < 0) {
 		perror("sending datagram message ack");
 		exit(4);
     	}
-        head.header.sin_family = htons(AF_INET);
+        	head.header.sin_family = htons(AF_INET);
 		head.header.sin_addr.s_addr = inet_addr(serverIP);
 		head.header.sin_port = htons(TCPDOUT);
-        memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
+        	memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
 		memcpy(&pckt.tcpHdr.source,&client.sin_port,sizeof(client.sin_port));
 		memcpy(&pckt.tcpHdr.dest,&final.sin_port,sizeof(client.sin_port));
 		pckt.tcpHdr.res1 = 0;
 		pckt.tcpHdr.doff = 5;
 		pckt.tcpHdr.fin = 0;
-		    pckt.tcpHdr.syn = 0;
-		    pckt.tcpHdr.rst = 0;
-		    pckt.tcpHdr.psh = 0;
-		    pckt.tcpHdr.ack = 0;
-		    pckt.tcpHdr.urg = 0;
-		    pckt.tcpHdr.ece = 0;
-		    pckt.tcpHdr.cwr = 0;
+		pckt.tcpHdr.syn = 0;
+		pckt.tcpHdr.rst = 0;
+		pckt.tcpHdr.psh = 0;
+		pckt.tcpHdr.ack = 0;
+		pckt.tcpHdr.urg = 0;
+		pckt.tcpHdr.ece = 0;
+		pckt.tcpHdr.cwr = 0;
 		pckt.tcpHdr.window = htons(MSS);
 		pckt.tcpHdr.check = 0;
 		pckt.tcpHdr.urg_ptr = 0;
