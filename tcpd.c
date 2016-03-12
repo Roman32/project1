@@ -69,6 +69,12 @@ typedef struct Packet{
 	char payload[MSS];
 }Packet;
 
+struct timeval start_time;
+//when sleep ends, the time at which this occurs is stored here
+struct timeval curr_time;
+//for storing the result of curr_time - start_time
+struct timeval result_time;
+
 #define MAX_BUFF 64000
 extern char servBuffer[MAX_BUFF];
 char cliBuffer[MAX_BUFF];
@@ -107,6 +113,77 @@ void send_to_SEND(int sock, struct sockaddr_in name);
 unsigned short checksum(char *data_p, int length);
 
 
+/* Subtract the ‘struct timeval’ values X and Y,
+   storing the result in RESULT.
+   Return 1 if the difference is negative, otherwise 0. */
+int
+timeval_subtract (result, x, y)
+struct timeval *result, *x, *y;
+{
+	if(x == NULL){printf("sub x was null\n");}
+	if(y == NULL){printf("sub y was null\n");}
+	if(result == NULL){printf("sub res was null\n");}
+	//printf("in substract\n");
+	long x_sec2usec = x -> tv_sec * 1000000;
+	long y_sec2usec = y -> tv_sec * 1000000;
+	//printf("in substract 2\n");
+	long x_t_usec = x_sec2usec + x -> tv_usec;
+	long y_t_usec = y_sec2usec + y -> tv_usec;
+	long res_t = x_t_usec - y_t_usec;
+	result -> tv_sec = res_t / 1000000;
+	result -> tv_usec = res_t % 1000000;
+
+
+
+  /* Return 1 if result is negative. */
+  return res_t <= 0; //changed from < to <= to check if 0 seconds are left
+}
+/*** Based on the implemenation above but for adding ***/
+int
+timeval_add (result, x, y)
+struct timeval *result, *x, *y;
+{
+    //printf("in add, x -> tv_sec: %ld x -> tv_usec: %ld\n",x -> tv_sec, x -> tv_usec);
+	//printf("in add, y -> tv_sec: %ld y -> tv_usec: %ld\n",y -> tv_sec, y -> tv_usec);
+  	if(x == NULL){printf("add x was null\n");}
+	if(y == NULL){printf("add y was null\n");}
+	if(result == NULL){printf("add res was null\n");}
+	//printf("in add\n");
+	long x_sec2usec = x -> tv_sec * 1000000;
+	long y_sec2usec = y -> tv_sec * 1000000;
+	//printf("in add 2\n");
+	long x_t_usec = x_sec2usec + x -> tv_usec;
+	long y_t_usec = y_sec2usec + y -> tv_usec;
+	long res_t = x_t_usec + y_t_usec;
+	result -> tv_sec = res_t / 1000000;
+	result -> tv_usec = res_t % 1000000;
+    //printf("in add, res -> tv_sec: %ld res -> tv_usec: %ld\n",result -> tv_sec, result-> tv_usec);
+  return x->tv_sec < y->tv_sec;
+}
+
+int
+timeval_compare (x, y)
+struct timeval *x, *y;
+{
+
+  if(x -> tv_sec > y -> tv_sec){
+   //printf("here 1 in cmp\n");
+   return 1;
+ }
+ if(x -> tv_sec == y -> tv_sec){
+  if(x -> tv_usec > y -> tv_usec){
+    //printf("here 2 in cmp\n");
+    return 1;
+  }else if(x->tv_usec == y -> tv_usec){
+    //printf("here 3 in cmp\n");
+    return 0;
+  }
+}
+  //x is less than y
+//printf("here 4 in cmp\n");
+return -1;
+}
+
 
 int main(int argc, char argv[]){
 
@@ -128,11 +205,7 @@ int main(int argc, char argv[]){
 	char ackBuffer[36]; //36 = tcp header + troll header
 	uint32_t seq_num = 0;
     	//for determining time at which sleep started
-	struct timeval start_time;
-		//when sleep ends, the time at which this occurs is stored here
-	struct timeval curr_time;
-		//for storing the result of curr_time - start_time
-	struct timeval result_time;
+	
 	fd_set portUp;
 	//TrollHeader head;
 	//Packet pckt;
@@ -264,7 +337,11 @@ int main(int argc, char argv[]){
 	FD_SET(sockOut, &portUp);
 	FD_SET(timer_lsock,&portUp);
 	FD_SET(ackFserverSock,&portUp);
-
+	struct timeval start_time;
+		//when sleep ends, the time at which this occurs is stored here
+	struct timeval curr_time;
+		//for storing the result of curr_time - start_time
+	struct timeval result_time;
 	while(1){
         fflush(stdout);
 		if(select(FD_SETSIZE,&portUp,NULL,NULL,NULL)){
@@ -310,6 +387,8 @@ int main(int argc, char argv[]){
       			//call send timer here
     		if(insertIntoCWindow(seq_num,0,cliStart,1000) == 1){
         		printf("inserted seq_num %d into window\n\n",seq_num);
+				gettimeofday(&start_time,NULL);
+				printf("here\n");
 				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 				//printf("Sent to the Troll: %d\n",bytesToTroll);
 				//sleep(1);
@@ -341,18 +420,31 @@ int main(int argc, char argv[]){
 			 memcpy(&p.tcpHdr,ackBuffer+16,sizeof(struct tcphdr)); //copy tcpHdr
 
 			 uint32_t ack_num = ntohl(p.tcpHdr.ack_seq);
-             		 printf("ack num is %d\n",ack_num);
-			 //figure out where ack is in tcp header
+     		 printf("ack num is %d\n",ack_num);
+			 
 
+			
+			 //we only want to update rtt when the oldest packet in window is acked
+			 printWindow();
+			 printf("oldestPacketInWindow() is %d\n",getOldestPacketInWindow());
+			 if(getOldestPacketInWindow() == ack_num){
+                 
+				 gettimeofday(&curr_time,NULL);	
+ 				 timeval_subtract(&result_time,&curr_time,&start_time);
+			     uint64_t rt = (result_time.tv_sec * 1000000 + result_time.tv_usec);
+				 printf("result time is %"PRIu64"\n",rt);
+				 update_rtt(rt);
+				 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
+			 }
 			 //call function to send a packet to timer to cancel timer for packet seq
-             		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+     		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
              //call function to remove packet from buffer
+			 printWindow();
 			 if(removeFromCWindow(ack_num) > 0){
 				
-				update_rtt(1000000);
-				printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
+				
 			 }
-              send_to_SEND(sockIn,cplt_send);	
+             send_to_SEND(sockIn,cplt_send);	
 		}
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){

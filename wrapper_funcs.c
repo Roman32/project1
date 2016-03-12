@@ -65,7 +65,7 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 	}
 	//currently receiving byte but some bug 
    	//this will make SEND() blocking until it receives packet from TCPD
-	printf("waiting for bytes in SEND()\n");
+	//printf("waiting for bytes in SEND()\n");
     //int wait_bytes = recvfrom(wait_sock,x,1,0,(struct sockaddr*)&wait,&addr_len);
     //printf("x was %d\n",x[0]);
 	return sent;

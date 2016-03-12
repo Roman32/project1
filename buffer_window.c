@@ -71,7 +71,9 @@ int removeFromCWindow(int seq_num){
    	 	//if this packet was the first packet in our window then we can move the start of packetBlock
    	 	if( i == windowStartOfPacketBlock){
    	 		shift_amount++;
-   	 		windowStartOfPacketBlock++; // only want to move the start of window if all packets before start have been acked
+			// only want to move the start of window if all packets before start have been acked
+   	 		windowStartOfPacketBlock++;
+			if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
    	 		i++;
    	 		int j;
    	 		for(j = i; j < 20; j++){
@@ -80,6 +82,7 @@ int removeFromCWindow(int seq_num){
    	 				break;
    	 			}else{ //continue moving the start of packet block up;
    	 				windowStartOfPacketBlock++;
+					if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
    	 				shift_amount++;
    	 			}
 
@@ -104,6 +107,23 @@ int isCWindowFull(){
 		return 0; //window has room
 	}
 
+}
+
+int getOldestPacketInWindow(){
+	 printf("getting old packet\n");
+	 uint32_t s_num = cliWindow[windowStartOfPacketBlock].seq_num;
+	 printf("returning old packet\n");
+	 return(s_num);
+
+}
+
+void printWindow(){
+	int i;
+	for(i = 0; i < 20; i++){
+		printf("Window block: %d seq num: %d  ack_flag: %d\n",i,cliWindow[i].seq_num,cliWindow[i].ack_flag);
+	}
+	printf("windowStartOfPacketBlock %d\n",windowStartOfPacketBlock);
+	printf("windowEndOfPacketBlockPlusOne %d\n",windowEndOfPacketBlockPlusOne );
 }
 
 int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
