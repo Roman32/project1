@@ -19,8 +19,8 @@ Due Date: 1/28/16
 This server will receive a file from the client using a
 TCP connection. 
 */
-long fileSize = 0;
-int totalRecv = 0;
+extern long fileSize;
+extern int totalRecv;
 void receiveFile(int sock);
 
 int main(int argc,char *argv[]){
@@ -62,11 +62,11 @@ client. It also creates or overwrites the file
 in lab2/output directory.*/
 void receiveFile(int sock){
 
-	//int bytesIn = 0;
-	long fileSize =0;
-	//char buffer[MSS];
+	int bytesIn = 0;
+	//long fileSize =0;
+	char buffer[MSS];
 	bzero(buffer,MSS);
-	int totalRecv = 0;
+	//int totalRecv = 0;
 	char fileIn[50] = "output/";
 	
 	/*Recieves the size of the file in 1st 4 bytes*/
@@ -113,5 +113,5 @@ void receiveFile(int sock){
 	}
 	printf("Total bytes recieved: %d\n",totalRecv);
 	close(fname);
-	close(sock);
+	CLOSE(sock);
 }

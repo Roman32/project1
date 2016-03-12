@@ -14,4 +14,5 @@
 #define MSS 1000
 #define CPTLSENDRECVPORT 6429
 #define CPTLRECVSENDPORT 4692
+extern int bytesInBuff;
 #endif

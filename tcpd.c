@@ -71,14 +71,14 @@ typedef struct Packet{
 
 #define MAX_BUFF 64000
 extern char servBuffer[MAX_BUFF];
-extern char cliBuffer[MAX_BUFF];
+char cliBuffer[MAX_BUFF];
 
 extern int servStart;
 extern int servEnd;
 extern int cliStart;
 extern int cliEnd;
 extern int isBuffFull;
-extern int bytesInBuff;
+int bytesInBuff;
 uint64_t rto = 3000000;
 float dev = 0;
 float est_rtt = 4000000;

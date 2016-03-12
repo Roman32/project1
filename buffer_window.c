@@ -12,7 +12,7 @@
 
 #define MAX_BUFF 64000
 char servBuffer[MAX_BUFF];
-char cliBuffer[MAX_BUFF];
+extern char cliBuffer[MAX_BUFF];
 
 int servStart = 0;
 int servEnd = 0;
@@ -20,7 +20,6 @@ int cliStart = 0;
 int cliEnd = 0;
 int isBuffFull = 0; // Set to 1 if  full, 0 not full
 int bytesInBuff = 0; // used to see if buffer should be set to full, incremented by # of bytes added to buffer
-
 typedef struct Pkt_Info{
 	int seq_num;
 	int ack_flag;
@@ -28,8 +27,8 @@ typedef struct Pkt_Info{
 	int sizeOfPkt;
 }Pkt_Info;
 
-Pkt_Info serWindow[20];
-Pkt_Info cliWindow[20];
+extern Pkt_Info serWindow[20];
+extern Pkt_Info cliWindow[20];
 
 int windowStartOfPacketBlock = 0;  //the index of the first unacked packet
 int windowEndOfPacketBlockPlusOne = 0; //the index where to insert the next incoming packet

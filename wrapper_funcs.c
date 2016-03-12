@@ -15,15 +15,15 @@ typedef struct Pkt_Info{
 	int pktStart;
 	int sizeOfPkt;
 }Pkt_Info;
-/*
-#define MAX_BUFF 64000;
-extern int bytesInBuff;
-extern Pkt_Info serWindow[20];
-extern Pkt_Info cliWindow[20];
-extern char cliBuffer[MAX_BUFF];
-extern long fileSize;
-extern int totalRecv;
-*/
+
+#define MAX_BUFF 64000
+int bytesInBuff;
+Pkt_Info serWindow[20];
+Pkt_Info cliWindow[20];
+char cliBuffer[MAX_BUFF];
+long fileSize;
+int totalRecv;
+
 /* NULL FUNCTION */
 int CONNECT(int socket,const struct sockaddr *address,socklen_t address_len){
 	return 0;
@@ -84,5 +84,18 @@ ssize_t RECV(int socket,const void *buffer,size_t length,int flags){
 
 
 int CLOSE(int socket){
+	int windowsEmpty = 0;
+	int i;
+	for(i = 0; i < 19; i++){
+		if(serWindow[i].ack_flag == 1 && cliWindow[i].ack_flag == 1){
+			windowsEmpty = 1;
+		}else{
+			windowsEmpty = 0;
+			break;
+		}
+	}
+	if(fileSize == totalRecv && windowsEmpty == 1){
+		printf("Closing the connection!\n");
 		return close(socket);
+	}
 }
