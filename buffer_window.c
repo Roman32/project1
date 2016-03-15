@@ -25,6 +25,7 @@ typedef struct Pkt_Info{
 	int ack_flag;
 	int pktStart;
 	int sizeOfPkt;
+	struct timeval start_time;
 }Pkt_Info;
 
 extern Pkt_Info serWindow[20];
@@ -34,13 +35,14 @@ int windowStartOfPacketBlock = 0;  //the index of the first unacked packet
 int windowEndOfPacketBlockPlusOne = 0; //the index where to insert the next incoming packet
 int numberOfPacketsInWindow = 0;
 
-int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt){
+int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt, struct timeval s_time){
 	//if window is not full
 	if(isCWindowFull() == 0){
 		cliWindow[windowEndOfPacketBlockPlusOne].seq_num = seq_num;
 		cliWindow[windowEndOfPacketBlockPlusOne].ack_flag = 0;
 		cliWindow[windowEndOfPacketBlockPlusOne].pktStart = pktStart;  //byte index of first byte in big buffer
 		cliWindow[windowEndOfPacketBlockPlusOne].sizeOfPkt = sizeOfPkt; //use pktStart + sizeOfPkt when obtaining this from buffer
+		cliWindow[windowEndOfPacketBlockPlusOne].start_time = s_time;
 		windowEndOfPacketBlockPlusOne++; //increment window index which is the next "open" spot
 		numberOfPacketsInWindow++;
 		if(windowEndOfPacketBlockPlusOne == 20){
@@ -54,6 +56,16 @@ int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt){
 	}
 
 }
+struct timeval getPktStartTime(int seq_num){
+
+	int i = 0;
+	for(i =0; i < 20; i++){
+		if(cliWindow[i].seq_num == seq_num){
+			return (struct timeval) cliWindow[i].start_time;
+		}
+	}
+	return (struct timeval) cliWindow[0].start_time;
+}
 
 int removeFromCWindow(int seq_num){
 	if(isCWindowFull() == -1){
@@ -64,7 +76,8 @@ int removeFromCWindow(int seq_num){
    int shift_amount = 0;
    for (i = 0; i < 20; i++){
    	 if(cliWindow[i].seq_num == seq_num){
-   	 	numberOfPacketsInWindow--;   
+   	 	numberOfPacketsInWindow--;
+        bytesInBuff -= cliWindow[i].sizeOfPkt;
    	 	cliWindow[i].ack_flag = 1;  // set this to one so we know we can override it
    	 	cliWindow[i].pktStart = -1;
    	 	 //prevent some errors i think
@@ -82,6 +95,7 @@ int removeFromCWindow(int seq_num){
    	 				break;
    	 			}else{ //continue moving the start of packet block up;
    	 				windowStartOfPacketBlock++;
+                    bytesInBuff -= cliWindow[j].sizeOfPkt;
 					if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
    	 				shift_amount++;
    	 			}
@@ -211,7 +225,7 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 			printf("Data Starts at %d\n",cliStart);
 			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			cliStart += bytesOut;
-			bytesInBuff -= bytesOut;
+			//bytesInBuff -= bytesOut;
 			bytesRead = bytesOut;
 			printf("Bytes remaining %d\n",bytesInBuff);
 		}else if(cliStart+bytesOut > MAX_BUFF && cliEnd != 0){
@@ -219,7 +233,7 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 			int remainder = (MAX_BUFF - cliStart);			
 			memcpy(pktBuffer,cliBuffer+cliStart,remainder);
 			memcpy(pktBuffer+remainder,cliBuffer,bytesOut-remainder);
-			bytesInBuff -= bytesOut;
+			//bytesInBuff -= bytesOut;
 			cliStart = bytesOut-remainder;
 			bytesRead = bytesOut;
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
@@ -228,7 +242,7 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 			memcpy(pktBuffer,cliBuffer+cliStart,bytesOut);
 			cliStart = 0;
 			bytesRead = bytesOut;
-			bytesInBuff -= bytesOut;
+			//bytesInBuff -= bytesOut;
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}
 	}

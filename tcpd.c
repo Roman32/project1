@@ -373,7 +373,7 @@ int main(int argc, char argv[]){
 			bzero(&buffer,sizeof(buffer));			
 			printf("Bytes read from buffer %d\n",readFromBufferC(buffer,bytesIn));
 
-			//printf("Decoded bytes coming out \n\n%s\n",buffer);
+			printf("Decoded bytes coming out \n\n%s\n",buffer);
 			
 			//check that bytes were written fully then send message to SEND() letting 
 			//it know that it is ok to send another packet
@@ -385,9 +385,10 @@ int main(int argc, char argv[]){
 			
     		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
-    		if(insertIntoCWindow(seq_num,0,cliStart,1000) == 1){
+    		gettimeofday(&start_time,NULL);
+    		if(insertIntoCWindow(seq_num,0,cliStart,bytesIn,start_time) == 1){
         		printf("inserted seq_num %d into window\n\n",seq_num);
-				gettimeofday(&start_time,NULL);
+				
 				printf("here\n");
 				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 				//printf("Sent to the Troll: %d\n",bytesToTroll);
@@ -403,7 +404,8 @@ int main(int argc, char argv[]){
 			int addr_len = sizeof(timer_listen);
 			int timer_bytes_in = recvfrom(timer_lsock,timerBuffer,sizeof(uint32_t),0,(struct sockaddr*)&timer_listen,&addr_len);
 			uint32_t inc_seq_num;
-			memcpy(&inc_seq_num,&timer_bytes_in,4);
+			memcpy(&inc_seq_num,&timerBuffer,4);
+            inc_seq_num = ntohl(inc_seq_num);
 			printf("Received a packet from timer. seq num %d\n",inc_seq_num);
 			//timer for ntohl(inc_seq_num) timed out resend packet
             resend_packet(inc_seq_num,sockIn,timer_ssock);
@@ -426,25 +428,29 @@ int main(int argc, char argv[]){
 
 			
 			 //we only want to update rtt when the oldest packet in window is acked
-			 printWindow();
-			 printf("oldestPacketInWindow() is %d\n",getOldestPacketInWindow());
-			 if(getOldestPacketInWindow() == ack_num){
+			// printWindow();
+			 //printf("oldestPacketInWindow() is %d\n",getOldestPacketInWindow());
+			
                  
-				 gettimeofday(&curr_time,NULL);	
- 				 timeval_subtract(&result_time,&curr_time,&start_time);
-			     uint64_t rt = (result_time.tv_sec * 1000000 + result_time.tv_usec);
-				 printf("result time is %"PRIu64"\n",rt);
-				 update_rtt(rt);
-				 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
-			 }
+				
+			 
+			 
+             //call function to remove packet from buffer
+			 //printWindow();
+			 getPktStartTime(ack_num);
+
+		     timeval_subtract(&result_time,&curr_time,&start_time);
+		     uint64_t rt = (result_time.tv_sec * 1000000 + result_time.tv_usec);
+			 printf("result time is %"PRIu64"\n",rt);
+			 update_rtt(rt);
+			 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
 			 //call function to send a packet to timer to cancel timer for packet seq
      		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
-             //call function to remove packet from buffer
-			 printWindow();
-			 if(removeFromCWindow(ack_num) > 0){
+
+			 removeFromCWindow(ack_num);
 				
 				
-			 }
+			 
              send_to_SEND(sockIn,cplt_send);	
 		}
 		//receiving from troll on server side
@@ -646,7 +652,8 @@ int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 	pckt.tcpHdr.ack_seq = 0;
     int location =  getGetPktLocation(s_num);
 	int pktSize = getPacketSize(s_num);
-   
+    printf("pktSize is %d\n",pktSize);
+	printf("pktLocation is %d\n",location);
 	char resendBuf[pktSize];
 	bzero(&resendBuf,sizeof(resendBuf));		
 	printf("Bytes read from buffer %d\n",readFromBufferToResend(resendBuf,pktSize,location));
@@ -655,7 +662,7 @@ int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 	
 	//check that bytes were written fully then send message to SEND() letting 
 	//it know that it is ok to send another packet
-
+	printf("bytes resending : %s\n",resendBuf);
 	memcpy(&pckt.payload,&resendBuf,pktSize);	//copies bytes from client to payload of packet
 	pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+pktSize);	//hopefully does the checksum
 	printf("The checksum for packet %d being resent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
