@@ -109,7 +109,7 @@ void send_to_timer(uint8_t packet_type,
 void send_ack(uint32_t seq_num, int sock, struct sockaddr_in ackToServerTroll);
 
 void send_to_SEND(int sock, struct sockaddr_in name);
-
+int resend_packet(uint32_t s_num, int sockIn, int timer_ssock);
 unsigned short checksum(char *data_p, int length);
 
 
@@ -404,8 +404,9 @@ int main(int argc, char argv[]){
 			int timer_bytes_in = recvfrom(timer_lsock,timerBuffer,sizeof(uint32_t),0,(struct sockaddr*)&timer_listen,&addr_len);
 			uint32_t inc_seq_num;
 			memcpy(&inc_seq_num,&timer_bytes_in,4);
-			printf("Received a packet from timer. seq num %d\n",seq_num);
+			printf("Received a packet from timer. seq num %d\n",inc_seq_num);
 			//timer for ntohl(inc_seq_num) timed out resend packet
+            resend_packet(inc_seq_num,sockIn,timer_ssock);
 
 		}
 		//receiving from tcpd server side acks
@@ -578,7 +579,7 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 	//send without body (ack seq is in tcp header)
 
 		/*Packet to Troll*/
-        	head.header.sin_family = htons(AF_INET);
+        head.header.sin_family = htons(AF_INET);
 		head.header.sin_addr.s_addr = inet_addr(clientIP);
 		head.header.sin_port = htons(ACKRPORT);
 
@@ -639,3 +640,37 @@ int update_rtt(uint64_t s_rtt){
    rto = mu * est_rtt + phi * dev;
 
 }
+
+int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
+	pckt.tcpHdr.seq = s_num; //set seq num;
+	pckt.tcpHdr.ack_seq = 0;
+    int location =  getGetPktLocation(s_num);
+	int pktSize = getPacketSize(s_num);
+   
+	char resendBuf[pktSize];
+	bzero(&resendBuf,sizeof(resendBuf));		
+	printf("Bytes read from buffer %d\n",readFromBufferToResend(resendBuf,pktSize,location));
+
+	//printf("Decoded bytes coming out \n\n%s\n",buffer);
+	
+	//check that bytes were written fully then send message to SEND() letting 
+	//it know that it is ok to send another packet
+
+	memcpy(&pckt.payload,&resendBuf,pktSize);	//copies bytes from client to payload of packet
+	pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+pktSize);	//hopefully does the checksum
+	printf("The checksum for packet %d being resent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
+	
+
+   send_to_timer(6,s_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+	//call send timer here
+
+	int bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+pktSize),0,   (struct sockaddr*)&troll,sizeof(troll));
+	printf("Resent packet to the Troll: %d\n",bytesToTroll);
+	//sleep(1);
+    //send at the end
+				
+            
+           	
+		
+}
+
