@@ -475,7 +475,7 @@ int main(int argc, char argv[]){
 
 
 
-				if(receivedFileSize == 0 && bytes == 4){
+				if(receivedFileSize == 0 && bytes == 40){
 				   receivedFileSize = 1;
 
 					writeToBufferC(bytes-36,bufferOut+36,0);
@@ -487,7 +487,7 @@ int main(int argc, char argv[]){
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 				}
-				if(receivedFileSize == 1 && bytes == 20 && receivedFileName == 0){
+				if(receivedFileSize == 1 && bytes == 56 && receivedFileName == 0){
 					receivedFileName = 1;
 
 					writeToBufferC(bytes-36,bufferOut+36,0);
