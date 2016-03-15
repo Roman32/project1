@@ -84,16 +84,16 @@ ssize_t RECV(int socket,const void *buffer,size_t length,int flags){
 
 
 int CLOSE(int socket){
-	int windowsEmpty = 0;
+	int windowsEmpty = 1; //Chamge this to 0
 	int i;
-	for(i = 0; i < 19; i++){
+	/*for(i = 0; i < 19; i++){
 		if(serWindow[i].ack_flag == 1 && cliWindow[i].ack_flag == 1){
 			windowsEmpty = 1;
 		}else{
 			windowsEmpty = 0;
 			break;
 		}
-	}
+	}*/
 	if(fileSize == totalRecv && windowsEmpty == 1){
 		printf("Closing the connection!\n");
 		return close(socket);
