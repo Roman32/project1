@@ -474,7 +474,7 @@ int main(int argc, char argv[]){
 				printf("Checksum calculated is %hu\n",check);
 
 
-
+				/*
 				if(receivedFileSize == 0 && bytes == 40){
 				   receivedFileSize = 1;
 
@@ -511,7 +511,15 @@ int main(int argc, char argv[]){
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 
-				}
+				}*/
+				writeToBufferC(bytes-36,bufferOut+36,0);
+					bzero(&bufferOut,sizeof(bufferOut));
+					char toServer[MSS];
+					readFromBufferC(toServer,bytes-36);
+					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+					//put received info into buffer
+					//send ack to troll on server side
+					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 	
 			}else{
 				printf("Checksum is **********DIFFERENT********** for packet %u\n",pcktS.tcpHdr.seq);
