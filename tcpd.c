@@ -94,7 +94,8 @@ float small_delta = 1.0 / 8.0;
 float mu = 1.0;
 float phi = 4.0;
 float diff = 0;
-
+int receivedFileSize = 0;
+int receivedFileName = 0;
 TrollHeader head;
 Packet pckt;
 Packet pcktS;
@@ -462,6 +463,7 @@ int main(int argc, char argv[]){
 			memcpy(&pcktS.tcpHdr,bufferOut+16,sizeof(struct tcphdr)); //copy tcpHdr
 			memcpy(&pcktS.payload,bufferOut+36,bytes-36); //copy of the payload
 			printf("Bytes recv from troll %d\n",bytes);
+
 			uint16_t checkRecv = pcktS.tcpHdr.check; //set recved checksum value to a temp value
 			//printf("Check recvd %hu\n",checkRecv);
 			pcktS.tcpHdr.check = 0; //zero out checksum
@@ -470,14 +472,47 @@ int main(int argc, char argv[]){
 				printf("Checksum is *****SAME***** for packet %d\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %hu\n",checkRecv);
 				printf("Checksum calculated is %hu\n",check);
-				writeToBufferC(bytes-36,bufferOut+36,0);
-				bzero(&bufferOut,sizeof(bufferOut));
-				char toServer[MSS];
-				readFromBufferC(toServer,bytes-36);
-				bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
-				//put received info into buffer
-				//send ack to troll on server side
-				send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
+
+
+
+				if(receivedFileSize == 0 && bytes == 4){
+				   receivedFileSize = 1;
+
+					writeToBufferC(bytes-36,bufferOut+36,0);
+					bzero(&bufferOut,sizeof(bufferOut));
+					char toServer[MSS];
+					readFromBufferC(toServer,bytes-36);
+					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+					//put received info into buffer
+					//send ack to troll on server side
+					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
+				}
+				if(receivedFileSize == 1 && bytes == 20 && receivedFileName == 0){
+					receivedFileName = 1;
+
+					writeToBufferC(bytes-36,bufferOut+36,0);
+					bzero(&bufferOut,sizeof(bufferOut));
+					char toServer[MSS];
+					readFromBufferC(toServer,bytes-36);
+					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+					//put received info into buffer
+					//send ack to troll on server side
+					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
+				}
+
+				if(receivedFileName == 1 && receivedFileSize == 1){
+
+					writeToBufferC(bytes-36,bufferOut+36,0);
+					bzero(&bufferOut,sizeof(bufferOut));
+					char toServer[MSS];
+					readFromBufferC(toServer,bytes-36);
+					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+					//put received info into buffer
+					//send ack to troll on server side
+					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
+
+				}
+	
 			}else{
 				printf("Checksum is **********DIFFERENT********** for packet %u\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %hu\n",checkRecv);
@@ -673,7 +708,7 @@ int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 
 	int bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+pktSize),0,   (struct sockaddr*)&troll,sizeof(troll));
 	printf("Resent packet to the Troll: %d\n",bytesToTroll);
-	//sleep(1);
+	//sleep(1);ls
     //send at the end
 				
             
