@@ -72,28 +72,38 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 	
 }
 /*Sets up RECV call properly */
-ssize_t RECV(int socket,const void *buffer,size_t length,int flags){
+ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
 	socklen_t leng;
 	struct sockaddr_in sock_addr;
 	sock_addr.sin_family = AF_INET;
 	sock_addr.sin_port = htons(SERVERPORT);
 	sock_addr.sin_addr.s_addr = 0;
 	leng = sizeof(sock_addr);
-	return recvfrom(socket,(char *)buffer,length,flags,(struct sockaddr*)&sock_addr,&leng);
+	int recv = recvfrom(sock,(char *)buffer,length,flags,(struct sockaddr*)&sock_addr,&leng);
+	
+	struct sockaddr_in bufferCheck;
+	int check_sock;
+	int sockLength =sizeof(bufferCheck);
+	check_sock= socket(AF_INET,SOCK_DGRAM,0);
+	bufferCheck.sin_family = AF_INET;
+	bufferCheck.sin_port = htons(TCPDRECVCHECK);
+	bufferCheck.sin_addr.s_addr = 0;
+	
+	return recv;
 }
 
 
 int CLOSE(int socket){
-	int windowsEmpty = 1; //Chamge this to 0
+	int windowsEmpty = 0; //Chamge this to 0
 	int i;
-	/*for(i = 0; i < 19; i++){
+	for(i = 0; i < 20; i++){
 		if(serWindow[i].ack_flag == 1 && cliWindow[i].ack_flag == 1){
 			windowsEmpty = 1;
 		}else{
 			windowsEmpty = 0;
 			break;
 		}
-	}*/
+	}
 	if(fileSize == totalRecv && windowsEmpty == 1){
 		printf("Closing the connection!\n");
 		return close(socket);
