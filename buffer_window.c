@@ -71,7 +71,9 @@ int removeFromCWindow(int seq_num){
    	 	//if this packet was the first packet in our window then we can move the start of packetBlock
    	 	if( i == windowStartOfPacketBlock){
    	 		shift_amount++;
-   	 		windowStartOfPacketBlock++; // only want to move the start of window if all packets before start have been acked
+			// only want to move the start of window if all packets before start have been acked
+   	 		windowStartOfPacketBlock++;
+			if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
    	 		i++;
    	 		int j;
    	 		for(j = i; j < 20; j++){
@@ -80,6 +82,7 @@ int removeFromCWindow(int seq_num){
    	 				break;
    	 			}else{ //continue moving the start of packet block up;
    	 				windowStartOfPacketBlock++;
+					if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
    	 				shift_amount++;
    	 			}
 
@@ -104,6 +107,47 @@ int isCWindowFull(){
 		return 0; //window has room
 	}
 
+}
+
+int getOldestPacketInWindow(){
+	 printf("getting old packet\n");
+	 uint32_t s_num = cliWindow[windowStartOfPacketBlock].seq_num;
+	 printf("returning old packet\n");
+	 return(s_num);
+
+}
+int getGetPktLocation(int seq_num){
+	int location;
+	int i;
+	for(i = 0; i < 20; i++){
+		if(cliWindow[i].seq_num == seq_num){
+			location = cliWindow[i].pktStart;
+			return location;
+		}
+	}
+	perror("packet %d was not found in window");
+	return -1;
+}
+int getPacketSize(int seq_num){
+	int size;
+	int i;
+	for(i = 0; i < 20; i++){
+		if(cliWindow[i].seq_num == seq_num){
+			size = cliWindow[i].sizeOfPkt;
+			return size;
+		}
+	}
+	perror("packet %d was not found in window");
+	return -1;
+}
+
+void printWindow(){
+	int i;
+	for(i = 0; i < 20; i++){
+		printf("Window block: %d seq num: %d  ack_flag: %d\n",i,cliWindow[i].seq_num,cliWindow[i].ack_flag);
+	}
+	printf("windowStartOfPacketBlock %d\n",windowStartOfPacketBlock);
+	printf("windowEndOfPacketBlockPlusOne %d\n",windowEndOfPacketBlockPlusOne );
 }
 
 int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
@@ -191,7 +235,41 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
    
 	return bytesRead;
 }
-
+int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){
+	
+	int bytesRead = 0;
+	isBuffFull = isBuffFilled();
+	if(isBuffFull == 0 && bytesInBuff == 0){
+		printf("The Buffer is empty!\n");
+	}else{
+		if(dataStart+bytesOut < MAX_BUFF){
+			printf("Data Starts at %d\n",dataStart);
+			memcpy(pktBuffer,cliBuffer+dataStart,bytesOut);
+			//dataStart += bytesOut;
+			//bytesInBuff -= bytesOut;
+			bytesRead = bytesOut;
+			//printf("Bytes remaining %d\n",bytesInBuff);
+		}else if(dataStart+bytesOut > MAX_BUFF && cliEnd != 0){
+			printf("Data Starts at %d\n",dataStart);
+			int remainder = (MAX_BUFF - dataStart);			
+			memcpy(pktBuffer,cliBuffer+dataStart,remainder);
+			memcpy(pktBuffer+remainder,cliBuffer,bytesOut-remainder);
+			//bytesInBuff -= bytesOut;
+			//dataStart = bytesOut-remainder;
+			bytesRead = bytesOut;
+			//printf("Bytes remaining in Buffer %d\n",bytesInBuff);
+		}else if(dataStart+bytesOut == MAX_BUFF && cliEnd != 0){
+			printf("Data Starts at %d\n",dataStart);
+			memcpy(pktBuffer,cliBuffer+dataStart,bytesOut);
+			dataStart = 0;
+			bytesRead = bytesOut;
+			//bytesInBuff -= bytesOut;
+			//printf("Bytes remaining in Buffer %d\n",bytesInBuff);
+		}
+	}
+   
+	return bytesRead;
+}
 int isBuffFilled(){
 	if(bytesInBuff >= MAX_BUFF){
 		isBuffFull = 1;
