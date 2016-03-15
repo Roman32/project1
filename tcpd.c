@@ -385,9 +385,10 @@ int main(int argc, char argv[]){
 			
     		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
-    		if(insertIntoCWindow(seq_num,0,cliStart,bytesIn) == 1){
+    		gettimeofday(&start_time,NULL);
+    		if(insertIntoCWindow(seq_num,0,cliStart,bytesIn,start_time) == 1){
         		printf("inserted seq_num %d into window\n\n",seq_num);
-				gettimeofday(&start_time,NULL);
+				
 				printf("here\n");
 				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 				//printf("Sent to the Troll: %d\n",bytesToTroll);
@@ -429,23 +430,27 @@ int main(int argc, char argv[]){
 			 //we only want to update rtt when the oldest packet in window is acked
 			// printWindow();
 			 //printf("oldestPacketInWindow() is %d\n",getOldestPacketInWindow());
-			 if(getOldestPacketInWindow() == ack_num){
+			
                  
-				 gettimeofday(&curr_time,NULL);	
- 				 timeval_subtract(&result_time,&curr_time,&start_time);
-			     uint64_t rt = (result_time.tv_sec * 1000000 + result_time.tv_usec);
-				 printf("result time is %"PRIu64"\n",rt);
-				 update_rtt(rt);
-				 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
-			 }
-			 //call function to send a packet to timer to cancel timer for packet seq
-     		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+				
+			 
+			 
              //call function to remove packet from buffer
 			 //printWindow();
-			 if(removeFromCWindow(ack_num) > 0){
+			 getPktStartTime(ack_num);
+
+		     timeval_subtract(&result_time,&curr_time,&start_time);
+		     uint64_t rt = (result_time.tv_sec * 1000000 + result_time.tv_usec);
+			 printf("result time is %"PRIu64"\n",rt);
+			 update_rtt(rt);
+			 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
+			 //call function to send a packet to timer to cancel timer for packet seq
+     		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+
+			 removeFromCWindow(ack_num);
 				
 				
-			 }
+			 
              send_to_SEND(sockIn,cplt_send);	
 		}
 		//receiving from troll on server side

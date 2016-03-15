@@ -25,6 +25,7 @@ typedef struct Pkt_Info{
 	int ack_flag;
 	int pktStart;
 	int sizeOfPkt;
+	struct timeval start_time;
 }Pkt_Info;
 
 extern Pkt_Info serWindow[20];
@@ -34,13 +35,14 @@ int windowStartOfPacketBlock = 0;  //the index of the first unacked packet
 int windowEndOfPacketBlockPlusOne = 0; //the index where to insert the next incoming packet
 int numberOfPacketsInWindow = 0;
 
-int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt){
+int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt, struct timeval s_time){
 	//if window is not full
 	if(isCWindowFull() == 0){
 		cliWindow[windowEndOfPacketBlockPlusOne].seq_num = seq_num;
 		cliWindow[windowEndOfPacketBlockPlusOne].ack_flag = 0;
 		cliWindow[windowEndOfPacketBlockPlusOne].pktStart = pktStart;  //byte index of first byte in big buffer
 		cliWindow[windowEndOfPacketBlockPlusOne].sizeOfPkt = sizeOfPkt; //use pktStart + sizeOfPkt when obtaining this from buffer
+		cliWindow[windowEndOfPacketBlockPlusOne].start_time = s_time;
 		windowEndOfPacketBlockPlusOne++; //increment window index which is the next "open" spot
 		numberOfPacketsInWindow++;
 		if(windowEndOfPacketBlockPlusOne == 20){
@@ -53,6 +55,16 @@ int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt){
 		return -1; //return -1 if window was full
 	}
 
+}
+struct timeval getPktStartTime(int seq_num){
+
+	int i = 0;
+	for(i =0; i < 20; i++){
+		if(cliWindow[i].seq_num == seq_num){
+			return (struct timeval) cliWindow[i].start_time;
+		}
+	}
+	return (struct timeval) cliWindow[0].start_time;
 }
 
 int removeFromCWindow(int seq_num){
