@@ -307,9 +307,9 @@ int isBuffFilled(){
 }
 
 int writeToBufferS(Packet pckt){	
-	int startLocation = (expectedSeq_num-1) % 64;
+	int startLocation = (pckt.tcpHdr.seq-1) % 64;
 	printf("sadasdsadaasd %d\n",startLocation*MSS);
-	memcpy(&servBuffer[startLocation*MSS],&pckt.payload,MSS);
+	memcpy(&servBuffer[startLocation*MSS],pckt.payload,MSS);
 	bytesInBuff += MSS;
 	return 0;
 }
@@ -327,10 +327,10 @@ int readFromBufferS(char pktBuffer[],int bytesOut){
 			printf("servBuffer+servStart is %s\n",(servBuffer+servStart));
 			printf("pcktBuffer is %s\n",(pktBuffer));
 			servStart += MSS;
-			int k = 0;
+			/*int k = 0;
 			for(k = 0; k < 3000; k++){
 				printf("buffer at %d is : %c\n",k,servBuffer[k]);
-			}
+			}*/
 			bytesRead = bytesOut;
 			printf("Bytes remaining %d\n",bytesInBuff);
 		}else if(servStart+bytesOut > MAX_BUFF && servEnd != 0){
