@@ -6,6 +6,7 @@
 #include <netinet/ip.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <linux/tcp.h>
 
 #include "buffer_window.h"
 #include "globals.h"
@@ -28,12 +29,24 @@ typedef struct Pkt_Info{
 	struct timeval start_time;
 }Pkt_Info;
 
+typedef struct TrollHeader{
+	struct sockaddr_in header;
+	//char body[1000];
+}TrollHeader;
+
+typedef struct Packet{
+	struct TrollHeader trollhdr;
+	struct tcphdr tcpHdr;
+	char payload[MSS];
+}Packet;
+
 extern Pkt_Info serWindow[20];
 extern Pkt_Info cliWindow[20];
 
 int windowStartOfPacketBlock = 0;  //the index of the first unacked packet
 int windowEndOfPacketBlockPlusOne = 0; //the index where to insert the next incoming packet
 int numberOfPacketsInWindow = 0;
+int expectedSeq_num = 1;
 
 int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt, struct timeval s_time){
 	//if window is not full
@@ -47,7 +60,6 @@ int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt, st
 		numberOfPacketsInWindow++;
 		if(windowEndOfPacketBlockPlusOne == 20){
 			windowEndOfPacketBlockPlusOne = 0; //wrap around
-
 		}
 		return 1; //return 1 if successsful insert
 	}else{
@@ -77,7 +89,7 @@ int removeFromCWindow(int seq_num){
    for (i = 0; i < 20; i++){
    	 if(cliWindow[i].seq_num == seq_num){
    	 	numberOfPacketsInWindow--;
-        bytesInBuff -= cliWindow[i].sizeOfPkt;
+        	bytesInBuff -= cliWindow[i].sizeOfPkt;
    	 	cliWindow[i].ack_flag = 1;  // set this to one so we know we can override it
    	 	cliWindow[i].pktStart = -1;
    	 	 //prevent some errors i think
@@ -95,7 +107,7 @@ int removeFromCWindow(int seq_num){
    	 				break;
    	 			}else{ //continue moving the start of packet block up;
    	 				windowStartOfPacketBlock++;
-                    bytesInBuff -= cliWindow[j].sizeOfPkt;
+                    			bytesInBuff -= cliWindow[j].sizeOfPkt;
 					if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
    	 				shift_amount++;
    	 			}
@@ -209,8 +221,7 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				printf("Value of isBuffFull %d\n",isBuffFull);
 			}
 		}
-	}
-    
+	}    
 	return bytesWritten;
 }
 
@@ -249,8 +260,9 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
    
 	return bytesRead;
 }
-int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){
-	
+
+
+int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){	
 	int bytesRead = 0;
 	isBuffFull = isBuffFilled();
 	if(isBuffFull == 0 && bytesInBuff == 0){
@@ -284,6 +296,8 @@ int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){
    
 	return bytesRead;
 }
+
+
 int isBuffFilled(){
 	if(bytesInBuff >= MAX_BUFF){
 		isBuffFull = 1;
@@ -291,4 +305,81 @@ int isBuffFilled(){
 	}
 	return 0;
 }
+
+int writeToBufferS(Packet pckt){	
+	int startLocation = (expectedSeq_num-1) % 64;
+	printf("sadasdsadaasd %d\n",startLocation*MSS);
+	memcpy(&servBuffer[startLocation*MSS],&pckt.payload,MSS);
+	bytesInBuff += MSS;
+	return 0;
+}
+
+int readFromBufferS(char pktBuffer[],int bytesOut){
+
+	int bytesRead = 0;
+	isBuffFull = isBuffFilled();
+	if(isBuffFull == 0 && bytesInBuff == 0){
+		printf("The Buffer is empty!\n");
+	}else{
+		if(servStart+bytesOut < MAX_BUFF){
+			printf("Data Starts at %d\n",servStart);
+			memcpy(pktBuffer,servBuffer+servStart,bytesOut);
+			printf("servBuffer+servStart is %s\n",(servBuffer+servStart));
+			printf("pcktBuffer is %s\n",(pktBuffer));
+			servStart += MSS;
+			int k = 0;
+			for(k = 0; k < 3000; k++){
+				printf("buffer at %d is : %c\n",k,servBuffer[k]);
+			}
+			bytesRead = bytesOut;
+			printf("Bytes remaining %d\n",bytesInBuff);
+		}else if(servStart+bytesOut > MAX_BUFF && servEnd != 0){
+			printf("Data Starts at %d\n",servStart);
+			int remainder = (MAX_BUFF - servStart);			
+			memcpy(pktBuffer,servBuffer+servStart,remainder);
+			memcpy(pktBuffer+remainder,servBuffer,bytesOut-remainder);
+			//bytesInBuff -= bytesOut;
+			servStart = bytesOut-remainder;
+			bytesRead = bytesOut;
+			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
+		}else if(servStart+bytesOut == MAX_BUFF && servEnd != 0){
+			printf("Data Starts at %d\n",servStart);
+			memcpy(pktBuffer,servBuffer+servStart,bytesOut);
+			servStart = 0;
+			bytesRead = bytesOut;
+			//bytesInBuff -= bytesOut;
+			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
+		}
+	}
+   
+	return bytesRead;
+	
+}
+
+int getGetPktLocationS(int seq_num){
+	int location;
+	int i;
+	for(i = 0; i < 20; i++){
+		if(serWindow[i].seq_num == seq_num){
+			location = serWindow[i].pktStart;
+			return location;
+		}
+	}
+	perror("packet %d was not found in window");
+	return -1;
+}
+int getPacketSizeS(int seq_num){
+	int size;
+	int i;
+	for(i = 0; i < 20; i++){
+		if(serWindow[i].seq_num == seq_num){
+			size = serWindow[i].sizeOfPkt;
+			return size;
+		}
+	}
+	perror("packet %d was not found in window");
+	return -1;
+}
+
+
 

@@ -12,8 +12,8 @@ int insertIntoCWindow(int seq_num, int ack_flag, int pktStart, int sizeOfPkt,str
 int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart);
 int removeFromCWindow(int seq_num);
 struct timeval getPktStartTime(int seq_num);
-
-
+int writeToBufferS();
+int readFromBufferS(char pktBuffer[],int seq_num);
 int updAckFlagInSWindow(int seq_num);
 int isCWindowFull();
 int getGetPktLocation(int seq_num);

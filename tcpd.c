@@ -447,7 +447,6 @@ int main(int argc, char argv[]){
 			 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
 			 //call function to send a packet to timer to cancel timer for packet seq
      		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
-
 			 removeFromCWindow(ack_num);
 				
 				
@@ -512,10 +511,12 @@ int main(int argc, char argv[]){
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 
 				}*/
-				writeToBufferC(bytes-36,bufferOut+36,0);
+					writeToBufferS(pcktS);
 					bzero(&bufferOut,sizeof(bufferOut));
 					char toServer[MSS];
-					readFromBufferC(toServer,bytes-36);
+					bzero(&toServer,MSS);
+					readFromBufferS(toServer,bytes-36);
+					printf("ToServer is: %s\n",toServer);
 					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
@@ -693,9 +694,9 @@ int update_rtt(uint64_t s_rtt){
 int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 	pckt.tcpHdr.seq = s_num; //set seq num;
 	pckt.tcpHdr.ack_seq = 0;
-    int location =  getGetPktLocation(s_num);
+    	int location =  getGetPktLocation(s_num);
 	int pktSize = getPacketSize(s_num);
-    printf("pktSize is %d\n",pktSize);
+    	printf("pktSize is %d\n",pktSize);
 	printf("pktLocation is %d\n",location);
 	char resendBuf[pktSize];
 	bzero(&resendBuf,sizeof(resendBuf));		
@@ -711,13 +712,13 @@ int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 	printf("The checksum for packet %d being resent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 	
 
-   send_to_timer(6,s_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+   	send_to_timer(6,s_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
 	//call send timer here
 
 	int bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+pktSize),0,   (struct sockaddr*)&troll,sizeof(troll));
 	printf("Resent packet to the Troll: %d\n",bytesToTroll);
 	//sleep(1);ls
-    //send at the end
+    	//send at the end
 				
             
            	
