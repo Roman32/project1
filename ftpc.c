@@ -56,7 +56,11 @@ int main(int argc, char *argv[]){
 	sock_addr.sin_port = htons(TCPDIN);
 	sock_addr.sin_addr.s_addr = inet_addr(clientIP);
 	
-	
+	if(BIND(sockfd,(struct sockaddr *)&sock_addr,sizeof(struct sockaddr_in)) < 0){
+
+	}
+
+  	sock_addr.sin_port = htons(TCPDIN);
 	if(CONNECT(sockfd,(struct sockaddr *)&sock_addr,sizeof(struct sockaddr_in)) < 0){
 		close(sockfd);
 		printf("ERROR CONNECTION FAILED!");
