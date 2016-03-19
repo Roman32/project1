@@ -65,7 +65,7 @@ typedef struct pktTimeInfo{
 
 pktTimeInfo pktTimes[20];
 int pktTimeIndex = 0;
-
+uint32_t expSeq = 3;
 typedef struct TrollHeader{
 	struct sockaddr_in header;
 	//char body[1000];
@@ -487,7 +487,7 @@ int main(int argc, char argv[]){
 
 			memcpy(&pcktS.payload,bufferOut+36,bytes-36); //copy of the payload
 			printf("Bytes recv from troll %d\n",bytes);
-
+		    
 			uint16_t checkRecv = pcktS.tcpHdr.check; //set recved checksum value to a temp value
 			//printf("Check recvd %hu\n",checkRecv);
 			pcktS.tcpHdr.check = 0; //zero out checksum
@@ -498,7 +498,7 @@ int main(int argc, char argv[]){
 				printf("Checksum calculated is %hu\n",check);
 
 
-
+				
 				if(receivedFileSize == 0 && bytes == 40){
 				   receivedFileSize = 1;
 					uint32_t n;
@@ -532,8 +532,11 @@ int main(int argc, char argv[]){
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 				}
-
-				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56){
+				uint32_t seq;
+			    memcpy(&seq,&pcktS.tcpHdr.seq,sizeof(uint32_t));
+				
+				printf("Packet seq is %d  expected: %d\n",seq,expSeq);
+				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56 && expSeq == seq ){
 					printf("----WRITE TO BUFFER----\n");
 					writeToBufferS(pcktS);
 					bzero(&bufferOut,sizeof(bufferOut));
@@ -546,7 +549,7 @@ int main(int argc, char argv[]){
 					//put received info into buffer
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
-
+					expSeq++;
 				}
 					/*writeToBufferS(pcktS);
 					bzero(&bufferOut,sizeof(bufferOut));

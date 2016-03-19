@@ -321,10 +321,11 @@ int writeToBufferS(Packet pckt){
 
 int readFromBufferS(char pktBuffer[],int bytesOut){
 
- int startLocation = servReadIndex % 64;
- memcpy(pktBuffer,servBuffer+startLocation,bytesOut);
- servReadIndex++;
- /*
+ //int startLocation = servReadIndex % 64;
+ //memcpy(pktBuffer,servBuffer+startLocation,bytesOut);
+ //servReadIndex++;
+ //if(servReadIndex == 63){servReadIndex = 0;}
+ 
 	int bytesRead = 0;
 	isBuffFull = isBuffFilled();
 	if(isBuffFull == 0 && bytesInBuff == 0){
@@ -355,8 +356,8 @@ int readFromBufferS(char pktBuffer[],int bytesOut){
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}
 	}
-   */
-	return startLocation;
+   
+	return bytesRead;
 
 }
 
