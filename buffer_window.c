@@ -16,6 +16,7 @@ char servBuffer[MAX_BUFF];
 extern char cliBuffer[MAX_BUFF];
 
 int servStart = 0;
+int servReadIndex = 0;
 int servEnd = 0;
 int cliStart = 0;
 int cliEnd = 0;
@@ -98,7 +99,7 @@ int removeFromCWindow(int seq_num){
    	 		shift_amount++;
 			// only want to move the start of window if all packets before start have been acked
    	 		windowStartOfPacketBlock++;
-			if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
+			if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;};
    	 		i++;
    	 		int j;
    	 		for(j = i; j < 20; j++){
@@ -108,7 +109,7 @@ int removeFromCWindow(int seq_num){
    	 			}else{ //continue moving the start of packet block up;
    	 				windowStartOfPacketBlock++;
                     			bytesInBuff -= cliWindow[j].sizeOfPkt;
-					if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;}; 
+					if(windowStartOfPacketBlock == 20){windowStartOfPacketBlock=0;};
    	 				shift_amount++;
    	 			}
 
@@ -126,7 +127,7 @@ int isCWindowFull(){
 	if(windowStartOfPacketBlock == windowEndOfPacketBlockPlusOne){
 		if(numberOfPacketsInWindow < 20){
 			return 0; //window is completly empty
-		}else{ 
+		}else{
 			return 1;
 		}
 	}else{
@@ -205,8 +206,8 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				memcpy(cliBuffer+cliEnd,pktBuffer,(MAX_BUFF)-cliEnd);
 				memcpy(cliBuffer,pktBuffer + (MAX_BUFF)-cliEnd,remainder);
 				cliEnd = bytesToWrite - remainder;
-				bytesWritten = bytesToWrite;	
-				bytesInBuff += bytesToWrite;	
+				bytesWritten = bytesToWrite;
+				bytesInBuff += bytesToWrite;
 				printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite > MAX_BUFF && cliStart == 0)){
@@ -221,12 +222,12 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				printf("Value of isBuffFull %d\n",isBuffFull);
 			}
 		}
-	}    
+	}
 	return bytesWritten;
 }
 
 int readFromBufferC(char pktBuffer[],int bytesOut){
-	
+
 	int bytesRead = 0;
 	isBuffFull = isBuffFilled();
 	if(isBuffFull == 0 && bytesInBuff == 0){
@@ -241,7 +242,7 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 			printf("Bytes remaining %d\n",bytesInBuff);
 		}else if(cliStart+bytesOut > MAX_BUFF && cliEnd != 0){
 			printf("Data Starts at %d\n",cliStart);
-			int remainder = (MAX_BUFF - cliStart);			
+			int remainder = (MAX_BUFF - cliStart);
 			memcpy(pktBuffer,cliBuffer+cliStart,remainder);
 			memcpy(pktBuffer+remainder,cliBuffer,bytesOut-remainder);
 			//bytesInBuff -= bytesOut;
@@ -257,12 +258,12 @@ int readFromBufferC(char pktBuffer[],int bytesOut){
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}
 	}
-   
+
 	return bytesRead;
 }
 
 
-int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){	
+int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){
 	int bytesRead = 0;
 	isBuffFull = isBuffFilled();
 	if(isBuffFull == 0 && bytesInBuff == 0){
@@ -277,7 +278,7 @@ int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){
 			//printf("Bytes remaining %d\n",bytesInBuff);
 		}else if(dataStart+bytesOut > MAX_BUFF && cliEnd != 0){
 			printf("Data Starts at %d\n",dataStart);
-			int remainder = (MAX_BUFF - dataStart);			
+			int remainder = (MAX_BUFF - dataStart);
 			memcpy(pktBuffer,cliBuffer+dataStart,remainder);
 			memcpy(pktBuffer+remainder,cliBuffer,bytesOut-remainder);
 			//bytesInBuff -= bytesOut;
@@ -293,7 +294,7 @@ int readFromBufferToResend(char pktBuffer[],int bytesOut,int dataStart){
 			//printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}
 	}
-   
+
 	return bytesRead;
 }
 
@@ -306,9 +307,10 @@ int isBuffFilled(){
 	return 0;
 }
 
-int writeToBufferS(Packet pckt){	
+int writeToBufferS(Packet pckt){
 	int startLocation = (pckt.tcpHdr.seq-1) % 64;
 	printf("startLocation in buffer: %d\n",startLocation*MSS);
+	printf("payload is %s\n",pckt.payload);
 	memcpy(&servBuffer[startLocation*MSS],pckt.payload,MSS);
 	char test[MSS];
 	memcpy(&test,&servBuffer[startLocation*MSS],MSS);
@@ -319,6 +321,10 @@ int writeToBufferS(Packet pckt){
 
 int readFromBufferS(char pktBuffer[],int bytesOut){
 
+ int startLocation = servReadIndex % 64;
+ memcpy(pktBuffer,servBuffer+startLocation,bytesOut);
+ servReadIndex++;
+ /*
 	int bytesRead = 0;
 	isBuffFull = isBuffFilled();
 	if(isBuffFull == 0 && bytesInBuff == 0){
@@ -333,7 +339,7 @@ int readFromBufferS(char pktBuffer[],int bytesOut){
 
 		}else if(servStart+bytesOut > MAX_BUFF && servEnd != 0){
 			printf("READFROMBUFFERS 2 Data Starts at %d\n",servStart);
-			int remainder = (MAX_BUFF - servStart);			
+			int remainder = (MAX_BUFF - servStart);
 			memcpy(pktBuffer,servBuffer+servStart,remainder);
 			memcpy(pktBuffer+remainder,servBuffer,bytesOut-remainder);
 			//bytesInBuff -= bytesOut;
@@ -349,9 +355,9 @@ int readFromBufferS(char pktBuffer[],int bytesOut){
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}
 	}
-   
-	return bytesRead;
-	
+   */
+	return startLocation;
+
 }
 
 int getGetPktLocationS(int seq_num){
@@ -378,6 +384,3 @@ int getPacketSizeS(int seq_num){
 	perror("packet %d was not found in window");
 	return -1;
 }
-
-
-
