@@ -10,7 +10,7 @@
 #include <inttypes.h>
 #include "globals.h"
 #include "buffer_window.h"
-
+#include <time.h>
 /* For Reference 20 bytes long
 struct tcphdr {
          __u16   source;
@@ -60,7 +60,7 @@ struct sockaddr_in cplt_send;
 
 typedef struct pktTimeInfo{
 	uint32_t seq_num;
-	struct timeval *st;
+	time_t start_time;
 }pktTimeInfo;
 
 pktTimeInfo pktTimes[20];
@@ -122,76 +122,6 @@ int resend_packet(uint32_t s_num, int sockIn, int timer_ssock);
 unsigned short checksum(char *data_p, int length);
 
 
-/* Subtract the ‘struct timeval’ values X and Y,
-   storing the result in RESULT.
-   Return 1 if the difference is negative, otherwise 0. */
-int
-timeval_subtract (result, x, y)
-struct timeval *result, *x, *y;
-{
-	if(x == NULL){printf("sub x was null\n");}
-	if(y == NULL){printf("sub y was null\n");}
-	if(result == NULL){printf("sub res was null\n");}
-	//printf("in substract\n");
-	long x_sec2usec = x -> tv_sec * 1000000;
-	long y_sec2usec = y -> tv_sec * 1000000;
-	//printf("in substract 2\n");
-	long x_t_usec = x_sec2usec + x -> tv_usec;
-	long y_t_usec = y_sec2usec + y -> tv_usec;
-	long res_t = x_t_usec - y_t_usec;
-	result -> tv_sec = res_t / 1000000;
-	result -> tv_usec = res_t % 1000000;
-
-
-
-  /* Return 1 if result is negative. */
-  return res_t <= 0; //changed from < to <= to check if 0 seconds are left
-}
-/*** Based on the implemenation above but for adding ***/
-int
-timeval_add (result, x, y)
-struct timeval *result, *x, *y;
-{
-    //printf("in add, x -> tv_sec: %ld x -> tv_usec: %ld\n",x -> tv_sec, x -> tv_usec);
-	//printf("in add, y -> tv_sec: %ld y -> tv_usec: %ld\n",y -> tv_sec, y -> tv_usec);
-  	if(x == NULL){printf("add x was null\n");}
-	if(y == NULL){printf("add y was null\n");}
-	if(result == NULL){printf("add res was null\n");}
-	//printf("in add\n");
-	long x_sec2usec = x -> tv_sec * 1000000;
-	long y_sec2usec = y -> tv_sec * 1000000;
-	//printf("in add 2\n");
-	long x_t_usec = x_sec2usec + x -> tv_usec;
-	long y_t_usec = y_sec2usec + y -> tv_usec;
-	long res_t = x_t_usec + y_t_usec;
-	result -> tv_sec = res_t / 1000000;
-	result -> tv_usec = res_t % 1000000;
-    //printf("in add, res -> tv_sec: %ld res -> tv_usec: %ld\n",result -> tv_sec, result-> tv_usec);
-  return x->tv_sec < y->tv_sec;
-}
-
-int
-timeval_compare (x, y)
-struct timeval *x, *y;
-{
-
-  if(x -> tv_sec > y -> tv_sec){
-   //printf("here 1 in cmp\n");
-   return 1;
- }
- if(x -> tv_sec == y -> tv_sec){
-  if(x -> tv_usec > y -> tv_usec){
-    //printf("here 2 in cmp\n");
-    return 1;
-  }else if(x->tv_usec == y -> tv_usec){
-    //printf("here 3 in cmp\n");
-    return 0;
-  }
-}
-  //x is less than y
-//printf("here 4 in cmp\n");
-return -1;
-}
 
 
 int main(int argc, char argv[]){
@@ -358,6 +288,7 @@ int main(int argc, char argv[]){
 		}
 		//receiving from client
 		if(FD_ISSET(sockIn,&portUp)){
+			printf("\n\n\n*****RECEIVED PACKET FROM CLIENT *****\n\n");
 			pckt.tcpHdr.check = 0;
 			bzero(&buffer,sizeof(buffer));
 			int addr_len =sizeof(client);
@@ -392,16 +323,15 @@ int main(int argc, char argv[]){
 			pckt.tcpHdr.check = checksum((char *)&pckt+16,sizeof(struct tcphdr)+bytesIn);	//hopefully does the checksum
 			printf("The checksum for packet %d being sent is: %hu\n",pckt.tcpHdr.seq,pckt.tcpHdr.check);
 
-		rto = 1000000;
+		    //rto = 1000000;
     		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
 			pktTimes[pktTimeIndex].seq_num = seq_num;
-			struct timeval *t;
-			t = malloc(sizeof(struct timeval));
-
-			gettimeofday(&t,NULL);
-			pktTimes[pktTimeIndex].st = t;
-  		pktTimeIndex++;
+			
+			time_t s_time;
+			time(&s_time);
+			pktTimes[pktTimeIndex].start_time = s_time;
+  			pktTimeIndex++;
 			if(pktTimeIndex == 20){pktTimeIndex = 0;}
 
     		if(insertIntoCWindow(seq_num,0,cliStart,bytesIn,start_time) == 1){
@@ -414,10 +344,12 @@ int main(int argc, char argv[]){
 	            //send at the end
 
             }
+			printf("\n*****END RECEIVED PACKET FROM CLIENT *****\n\n");
 
 		}
 		//receiving from timer
 		if(FD_ISSET(timer_lsock,&portUp)){
+			printf("\n\n\n*****RECEIVED PACKET FROM TIMER *****\n\n");
 			bzero(&timerBuffer,sizeof(timerBuffer));
 			int addr_len = sizeof(timer_listen);
 			int timer_bytes_in = recvfrom(timer_lsock,timerBuffer,sizeof(uint32_t),0,(struct sockaddr*)&timer_listen,&addr_len);
@@ -427,11 +359,11 @@ int main(int argc, char argv[]){
 			printf("Received a packet from timer. seq num %d\n",inc_seq_num);
 			//timer for ntohl(inc_seq_num) timed out resend packet
             resend_packet(inc_seq_num,sockIn,timer_ssock);
-
+			printf("\n*****END: RECEIVED PACKET FROM TIMER *****\n\n");
 		}
 		//receiving from tcpd server side acks
 		if(FD_ISSET(ackFserverSock,&portUp)){
-			 printf("received ack port activity\n");
+			 printf("\n\n\n*****RECEIVED ACK FROM SERVER TCPD*****\n\n");
        	     		bzero(&ackBuffer,sizeof(ackBuffer));
 			 int addr_len = sizeof(ackFromServer);
 			 int ack_bytes_in = recvfrom(ackFserverSock,ackBuffer,36,0,(struct sockaddr*)&ackFromServer,&addr_len);
@@ -462,10 +394,14 @@ int main(int argc, char argv[]){
 			 //printWindow();
 			 //getPktStartTime(ack_num);
 
-		     timeval_subtract(&result_time,&curr_time,&(pktTimes[r].st));
-		     uint64_t rt = (result_time.tv_sec * 1000000 + result_time.tv_usec);
-			 printf("result time is %"PRIu64"\n",rt);
-			 update_rtt(rt);
+		     time_t cur_time;
+			 time(&cur_time);
+			 time_t s = pktTimes[r].start_time;
+			 double diffs = difftime(cur_time,s);
+			 printf("diffs is %f\n",diffs);
+			 diffs = diffs * 1000000;
+			 
+			 update_rtt(diffs);
 			 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
 			 //call function to send a packet to timer to cancel timer for packet seq
      		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
@@ -474,6 +410,7 @@ int main(int argc, char argv[]){
 
 
              send_to_SEND(sockIn,cplt_send);
+			 printf("\n*****END: RECEIVED ACK FROM SERVER TCPD *****\n\n");
 		}
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
@@ -639,10 +576,11 @@ void send_to_SEND(int sock, struct sockaddr_in name){
 }
 
 void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t tv_usec,int sock,struct sockaddr_in name){
-
+	printf("\n\n*****SENDING TO TIMER****\n\n");
+	if(tv_sec == 0 && tv_usec < 1000){tv_usec = 1000;}
 	int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
 	//printf("buffsize is %d\n",buffSize);
-	//printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
+	printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
 	char *cli_buf = malloc(buffSize);
     	bzero(cli_buf,buffSize);
 
@@ -656,11 +594,12 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
 	memcpy(cli_buf+13,&tv_usec,8);
 
 	int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
-    	printf("res is %d\n",res);
+    	
     	if(res <0) {
 		perror("sending datagram message");
 		exit(4);
     	}
+	printf("\n\n*****END: SENDING TO TIMER****\n\n");
 }
 
 void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToServerTroll){
@@ -732,6 +671,26 @@ int update_rtt(uint64_t s_rtt){
 }
 
 int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
+	
+        	head.header.sin_family = htons(AF_INET);
+		head.header.sin_addr.s_addr = inet_addr(serverIP);
+		head.header.sin_port = htons(TCPDOUT);
+        	memcpy(&pckt.trollhdr,&head,sizeof(struct TrollHeader));
+		memcpy(&pckt.tcpHdr.source,&client.sin_port,sizeof(client.sin_port));
+		memcpy(&pckt.tcpHdr.dest,&final.sin_port,sizeof(client.sin_port));
+		pckt.tcpHdr.res1 = 0;
+		pckt.tcpHdr.doff = 5;
+		pckt.tcpHdr.fin = 0;
+		pckt.tcpHdr.syn = 0;
+		pckt.tcpHdr.rst = 0;
+		pckt.tcpHdr.psh = 0;
+		pckt.tcpHdr.ack = 0;
+		pckt.tcpHdr.urg = 0;
+		pckt.tcpHdr.ece = 0;
+		pckt.tcpHdr.cwr = 0;
+		pckt.tcpHdr.window = htons(MSS);
+		pckt.tcpHdr.check = 0;
+		pckt.tcpHdr.urg_ptr = 0;
 	pckt.tcpHdr.seq = s_num; //set seq num;
 	pckt.tcpHdr.ack_seq = 0;
     int location =  getGetPktLocation(s_num);
