@@ -355,10 +355,10 @@ int main(int argc, char argv[]){
 			int timer_bytes_in = recvfrom(timer_lsock,timerBuffer,sizeof(uint32_t),0,(struct sockaddr*)&timer_listen,&addr_len);
 			uint32_t inc_seq_num;
 			memcpy(&inc_seq_num,&timerBuffer,4);
-            inc_seq_num = ntohl(inc_seq_num);
+            		inc_seq_num = ntohl(inc_seq_num);
 			printf("Received a packet from timer. seq num %d\n",inc_seq_num);
 			//timer for ntohl(inc_seq_num) timed out resend packet
-            resend_packet(inc_seq_num,sockIn,timer_ssock);
+            		resend_packet(inc_seq_num,sockIn,timer_ssock);
 			printf("\n*****END: RECEIVED PACKET FROM TIMER *****\n\n");
 		}
 		//receiving from tcpd server side acks
@@ -404,12 +404,12 @@ int main(int argc, char argv[]){
 			 update_rtt(diffs);
 			 printf("new rto is %"PRIu64" %"PRIu64" \n\n",rto/1000000,rto%1000000);
 			 //call function to send a packet to timer to cancel timer for packet seq
-     		 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
+     		 	 send_to_timer(7,ack_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
 			 removeFromCWindow(ack_num);
 
 
 
-             send_to_SEND(sockIn,cplt_send);
+             		 send_to_SEND(sockIn,cplt_send);
 			 printf("\n*****END: RECEIVED ACK FROM SERVER TCPD *****\n\n");
 		}
 		//receiving from troll on server side
