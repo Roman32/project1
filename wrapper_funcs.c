@@ -35,6 +35,7 @@ int ACCEPT(int socket, struct sockaddr *address,socklen_t address_len){
 }
 
 int BIND(int socket,struct sockaddr *address, socklen_t address_len){
+	
 	return bind(socket,address,address_len);
 }
 
@@ -53,7 +54,7 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 
 	int sent = sendto(sock,buffer,length,flags,(struct sockaddr*)&sock_addr,sizeof(sock_addr));
 	//set up connection to recv a packet from tcpd letting SEND() know it is ok to return
-   	struct sockaddr_in wait;
+   	/*struct sockaddr_in wait;
 	int wait_sock;
     	int addr_len = sizeof(wait);
 	wait_sock = socket(AF_INET, SOCK_DGRAM,0);
@@ -62,11 +63,13 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 	wait.sin_addr.s_addr = 0;
 	if(bind(wait_sock,(struct sockaddr*)&wait,sizeof(wait)) < 0){
 		//perror("Failed to bind socket for wait comm SEND()\n");
-	}
+	}*/
 	//currently receiving byte but some bug 
    	//this will make SEND() blocking until it receives packet from TCPD
 	//printf("waiting for bytes in SEND()\n");
-    //int wait_bytes = recvfrom(wait_sock,x,1,0,(struct sockaddr*)&wait,&addr_len);
+	socklen_t leng;
+	leng = sizeof(sock_addr);
+    int wait_bytes = recvfrom(sock,x,1,0,(struct sockaddr*)&sock_addr,&leng);
     //printf("x was %d\n",x[0]);
 	return sent;
 	

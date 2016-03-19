@@ -302,7 +302,7 @@ int main(int argc, char argv[]){
 			printf("Bytes written to buffer %d\n",numberOfBytesWrittenToBuffer);
 			//let send know that we wrote all byte sto buffer
 			if(numberOfBytesWrittenToBuffer == bytesIn){
-				send_to_SEND(sockIn,cplt_send);
+				send_to_SEND(sockIn,client);
 			}else{
 				perror("buffer was full when trying to insert\n");
 			}
@@ -336,7 +336,7 @@ int main(int argc, char argv[]){
 
     		if(insertIntoCWindow(seq_num,0,cliStart,bytesIn,start_time) == 1){
         		printf("inserted seq_num %d into window\n\n",seq_num);
-
+				//send_to_SEND(sockIn,cplt_send);
 				//printf("here\n");
 				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 				//printf("Sent to the Troll: %d\n",bytesToTroll);
@@ -358,7 +358,11 @@ int main(int argc, char argv[]){
             inc_seq_num = ntohl(inc_seq_num);
 			printf("Received a packet from timer. seq num %d\n",inc_seq_num);
 			//timer for ntohl(inc_seq_num) timed out resend packet
-            resend_packet(inc_seq_num,sockIn,timer_ssock);
+			if(getGetPktLocation(inc_seq_num) > 0){
+            	resend_packet(inc_seq_num,sockIn,timer_ssock);
+			}else{
+				printf("packet not in window: not resending");
+			}
 			printf("\n*****END: RECEIVED PACKET FROM TIMER *****\n\n");
 		}
 		//receiving from tcpd server side acks
@@ -408,8 +412,8 @@ int main(int argc, char argv[]){
 			 removeFromCWindow(ack_num);
 
 
-
-             send_to_SEND(sockIn,cplt_send);
+				//send_to_SEND(sockIn,cplt_send);
+             
 			 printf("\n*****END: RECEIVED ACK FROM SERVER TCPD *****\n\n");
 		}
 		//receiving from troll on server side
@@ -514,6 +518,7 @@ int main(int argc, char argv[]){
 		FD_SET(sockOut, &portUp);
 		FD_SET(timer_lsock,&portUp);
         	FD_SET(ackFserverSock,&portUp);
+		
 	}
 
 	return 0;
@@ -560,7 +565,7 @@ unsigned short checksum(char *data_p, int length)
 
 
 void send_to_SEND(int sock, struct sockaddr_in name){
-	//printf("send to send called\n");
+	printf("send to send called\n");
 
 	int buffSize = sizeof(uint8_t);
 	char *cli_buf = malloc(buffSize);
