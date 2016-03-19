@@ -502,7 +502,7 @@ int main(int argc, char argv[]){
 				if(receivedFileSize == 0 && bytes == 40){
 				   receivedFileSize = 1;
 					uint32_t n;
-					memcpy(&n,&pcktS+36,4);
+					memcpy(&n,&pcktS.payload,4);
 					printf("first data is %d\n",ntohl(n));
 					printf("----WRITE TO BUFFER----\n");
 					writeToBufferS(pcktS);
@@ -510,8 +510,8 @@ int main(int argc, char argv[]){
 					char toServer[MSS];
 					bzero(&toServer,MSS);
 					printf("----READ TO BUFFER----\n");
-					readFromBufferS(toServer,bytes-36);
-					printf("FILESIZE SENDING TO SERVER is: %d\n",toServer);
+					readFromBufferS(toServer,MSS);
+					printf("FILESIZE SENDING TO SERVER is: %d\n",atoi(toServer));
 					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
@@ -544,7 +544,7 @@ int main(int argc, char argv[]){
 					bzero(&toServer,MSS);
 					printf("----READ TO BUFFER----\n");
 					readFromBufferS(toServer,bytes-36);
-					printf("FILEDATA SENDING TO SERVER is: %s\n",toServer);
+					//printf("FILEDATA SENDING TO SERVER is: %s\n",toServer);
 					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
