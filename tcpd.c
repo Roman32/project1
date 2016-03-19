@@ -58,6 +58,14 @@ struct sockaddr_in ackFromServer;
 struct sockaddr_in ackToServerTroll;
 struct sockaddr_in cplt_send;
 
+typedef struct pktTimeInfo{
+	uint32_t seq_num;
+	struct timeval *st;
+}pktTimeInfo;
+
+pktTimeInfo pktTimes[20];
+int pktTimeIndex = 0;
+
 typedef struct TrollHeader{
 	struct sockaddr_in header;
 	//char body[1000];
@@ -371,10 +379,11 @@ int main(int argc, char argv[]){
 			//printf("Bytes from client :%d\n",bytesIn);
 			printf("here\n");
 			
-			bzero(&buffer,sizeof(buffer));			
-			printf("Bytes read from buffer %d\n",readFromBufferC(buffer,bytesIn));
+			bzero(&buffer,sizeof(buffer));	
+			readFromBufferC(buffer,bytesIn);		
+			//printf("Bytes read from buffer %d\n",);
 
-			printf("Decoded bytes coming out \n\n%s\n",buffer);
+			//printf("Decoded bytes coming out \n\n%s\n",buffer);
 			
 			//check that bytes were written fully then send message to SEND() letting 
 			//it know that it is ok to send another packet
@@ -386,11 +395,19 @@ int main(int argc, char argv[]){
 		rto = 1000000;	
     		send_to_timer(6,seq_num,rto / 1000000,rto % 1000000,timer_ssock,timer_send);
       			//call send timer here
-    		gettimeofday(&start_time,NULL);
+			pktTimes[pktTimeIndex].seq_num = seq_num;
+			struct timeval *t;
+			t = malloc(sizeof(struct timeval));
+			  		
+			gettimeofday(&t,NULL);
+			pktTimes[pktTimeIndex].st = t;
+  			pktTimeIndex++;
+			if(pktTimeIndex == 20){pktTimeIndex = 0;}
+
     		if(insertIntoCWindow(seq_num,0,cliStart,bytesIn,start_time) == 1){
         		printf("inserted seq_num %d into window\n\n",seq_num);
 				
-				printf("here\n");
+				//printf("here\n");
 				bytesToTroll = sendto(sockIn,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)+bytesIn),0,(struct sockaddr*)&troll,sizeof(troll));
 				//printf("Sent to the Troll: %d\n",bytesToTroll);
 				//sleep(1);
@@ -434,13 +451,18 @@ int main(int argc, char argv[]){
 			
                  
 				
-			 
+			 int r;
+			 for(r = 0; r < 20; r++){
+				if(pktTimes[r].seq_num == ack_num){
+				  printf("r was %d\n",r);	
+				}		
+			 }
 			 
              //call function to remove packet from buffer
 			 //printWindow();
-			 getPktStartTime(ack_num);
+			 //getPktStartTime(ack_num);
 
-		     timeval_subtract(&result_time,&curr_time,&start_time);
+		     timeval_subtract(&result_time,&curr_time,&(pktTimes[r].st));
 		     uint64_t rt = (result_time.tv_sec * 1000000 + result_time.tv_usec);
 			 printf("result time is %"PRIu64"\n",rt);
 			 update_rtt(rt);
@@ -455,11 +477,14 @@ int main(int argc, char argv[]){
 		}
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
+			fflush(stdout);
+			printf("\n\n\n***************RECEIVING FROM CLIENT TROLL ********************\n\n");
 			bzero(&bufferOut,sizeof(bufferOut));
 			int addr_len = sizeof(server);
 			bytes =recvfrom(sockOut,bufferOut,sizeof(bufferOut),0,(struct sockaddr*)&server,&addr_len);
 			memcpy(&pcktS.trollhdr,bufferOut,sizeof(struct TrollHeader)); //Copy troll header to recieved packet troll header, not really needed.
 			memcpy(&pcktS.tcpHdr,bufferOut+16,sizeof(struct tcphdr)); //copy tcpHdr
+			
 			memcpy(&pcktS.payload,bufferOut+36,bytes-36); //copy of the payload
 			printf("Bytes recv from troll %d\n",bytes);
 
@@ -472,17 +497,21 @@ int main(int argc, char argv[]){
 				printf("Checksum rcvd is: %hu\n",checkRecv);
 				printf("Checksum calculated is %hu\n",check);
 
-
+				
 				
 				if(receivedFileSize == 0 && bytes == 40){
 				   receivedFileSize = 1;
-
+					uint32_t n;
+					memcpy(&n,&pcktS+36,4);					
+					printf("first data is %d\n",ntohl(n));
+					printf("----WRITE TO BUFFER----\n");
 					writeToBufferS(pcktS);
 					bzero(&bufferOut,sizeof(bufferOut));
 					char toServer[MSS];
 					bzero(&toServer,MSS);
+					printf("----READ TO BUFFER----\n");
 					readFromBufferS(toServer,bytes-36);
-					printf("ToServer is: %s\n",toServer);
+					printf("FILESIZE SENDING TO SERVER is: %d\n",toServer);
 					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
@@ -490,27 +519,29 @@ int main(int argc, char argv[]){
 				}
 				if(receivedFileSize == 1 && bytes == 56 && receivedFileName == 0){
 					receivedFileName = 1;
-
+					printf("----WRITE TO BUFFER----\n");
 					writeToBufferS(pcktS);
 					bzero(&bufferOut,sizeof(bufferOut));
 					char toServer[MSS];
 					bzero(&toServer,MSS);
+					printf("----READ TO BUFFER----\n");
 					readFromBufferS(toServer,bytes-36);
-					printf("ToServer is: %s\n",toServer);
+					printf("FILENAME SENDING TO SERVER is: %s\n",toServer);
 					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 				}
 
-				if(receivedFileName == 1 && receivedFileSize == 1){
-
+				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56){
+					printf("----WRITE TO BUFFER----\n");
 					writeToBufferS(pcktS);
 					bzero(&bufferOut,sizeof(bufferOut));
 					char toServer[MSS];
 					bzero(&toServer,MSS);
+					printf("----READ TO BUFFER----\n");
 					readFromBufferS(toServer,bytes-36);
-					printf("ToServer is: %s\n",toServer);
+					printf("FILEDATA SENDING TO SERVER is: %s\n",toServer);
 					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
@@ -589,7 +620,7 @@ unsigned short checksum(char *data_p, int length)
 
 
 void send_to_SEND(int sock, struct sockaddr_in name){
-	printf("send to send called\n");
+	//printf("send to send called\n");
 	
 	int buffSize = sizeof(uint8_t);
 	char *cli_buf = malloc(buffSize);
@@ -597,7 +628,7 @@ void send_to_SEND(int sock, struct sockaddr_in name){
 	uint8_t packet_type = 13;
 	memcpy(cli_buf,&packet_type,1);
    	int res = sendto(sock, cli_buf,buffSize, 0, (struct sockaddr *)&name, sizeof(name));
-	printf("send to send res is %d\n",res);
+	//printf("send to send res is %d\n",res);
 	if(res <0) {
 		perror("sending datagram message send_to_SEND");
 		exit(4);
@@ -630,7 +661,7 @@ void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t
 }
 
 void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToServerTroll){
-	printf("ack for seq_num %d sent\n",seq_num);
+	//printf("ack for seq_num %d sent\n",seq_num);
 	//build tcp ack header
 	//send without body (ack seq is in tcp header)
 
@@ -658,7 +689,7 @@ void send_ack(uint32_t seq_num, int serverTrollSock, struct sockaddr_in ackToSer
 		pckt.tcpHdr.check = 0;
 		pckt.tcpHdr.urg_ptr = 0;
 		int bytesToTroll = sendto(serverTrollSock,(char *)&pckt,(sizeof(pckt.trollhdr)+sizeof(pckt.tcpHdr)),0,(struct sockaddr*)&ackToServerTroll,sizeof(ackToServerTroll));
-    		printf("res in ack send is %d\n",bytesToTroll);
+    		//printf("res in ack send is %d\n",bytesToTroll);
     	if(bytesToTroll < 0) {
 		perror("sending datagram message ack");
 		exit(4);
@@ -700,9 +731,9 @@ int update_rtt(uint64_t s_rtt){
 int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 	pckt.tcpHdr.seq = s_num; //set seq num;
 	pckt.tcpHdr.ack_seq = 0;
-    	int location =  getGetPktLocation(s_num);
+    int location =  getGetPktLocation(s_num);
 	int pktSize = getPacketSize(s_num);
-    	printf("pktSize is %d\n",pktSize);
+    printf("pktSize is %d\n",pktSize);
 	printf("pktLocation is %d\n",location);
 	char resendBuf[pktSize];
 	bzero(&resendBuf,sizeof(resendBuf));		

@@ -308,8 +308,11 @@ int isBuffFilled(){
 
 int writeToBufferS(Packet pckt){	
 	int startLocation = (pckt.tcpHdr.seq-1) % 64;
-	printf("sadasdsadaasd %d\n",startLocation*MSS);
+	printf("startLocation in buffer: %d\n",startLocation*MSS);
 	memcpy(&servBuffer[startLocation*MSS],pckt.payload,MSS);
+	char test[MSS];
+	memcpy(&test,&servBuffer[startLocation*MSS],MSS);
+	printf("test is %d\n",test);
 	bytesInBuff += MSS;
 	return 0;
 }
@@ -322,19 +325,14 @@ int readFromBufferS(char pktBuffer[],int bytesOut){
 		printf("The Buffer is empty!\n");
 	}else{
 		if(servStart+bytesOut < MAX_BUFF){
-			printf("Data Starts at %d\n",servStart);
+			printf("READFROMBUFFERS 1 Data Starts at %d\n",servStart);
 			memcpy(pktBuffer,servBuffer+servStart,bytesOut);
-			printf("servBuffer+servStart is %s\n",(servBuffer+servStart));
-			printf("pcktBuffer is %s\n",(pktBuffer));
 			servStart += MSS;
-			/*int k = 0;
-			for(k = 0; k < 3000; k++){
-				printf("buffer at %d is : %c\n",k,servBuffer[k]);
-			}*/
 			bytesRead = bytesOut;
 			printf("Bytes remaining %d\n",bytesInBuff);
+
 		}else if(servStart+bytesOut > MAX_BUFF && servEnd != 0){
-			printf("Data Starts at %d\n",servStart);
+			printf("READFROMBUFFERS 2 Data Starts at %d\n",servStart);
 			int remainder = (MAX_BUFF - servStart);			
 			memcpy(pktBuffer,servBuffer+servStart,remainder);
 			memcpy(pktBuffer+remainder,servBuffer,bytesOut-remainder);
@@ -343,7 +341,7 @@ int readFromBufferS(char pktBuffer[],int bytesOut){
 			bytesRead = bytesOut;
 			printf("Bytes remaining in Buffer %d\n",bytesInBuff);
 		}else if(servStart+bytesOut == MAX_BUFF && servEnd != 0){
-			printf("Data Starts at %d\n",servStart);
+			printf("READFROMBUFFERS  3 Data Starts at %d\n",servStart);
 			memcpy(pktBuffer,servBuffer+servStart,bytesOut);
 			servStart = 0;
 			bytesRead = bytesOut;
