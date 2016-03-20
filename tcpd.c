@@ -526,7 +526,7 @@ int main(int argc, char argv[]){
 			    	memcpy(&seq,&pcktS.tcpHdr.seq,sizeof(uint32_t));
 				
 				printf("Packet seq is %d  expected: %d\n",seq,expSeq);
-				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56 && /*last_seq_sent < seq*/){
+				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56  /*last_seq_sent < seq*/){
 					serWindow[(seq-1) % 64].serBuffIndex = ((seq-1) % 64);
 					serWindow[(seq-1) % 64].size = bytes -36;
 					
