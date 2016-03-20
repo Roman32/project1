@@ -96,6 +96,7 @@ ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
 	printf("size demanded is %d\n",ntohl(size));
 	int bytesToSend = sendto(check_sock,&size,sizeof(size),0,(struct sockaddr*)&bufferCheck,sizeof(bufferCheck));
 	*/
+
 	socklen_t leng;
 	struct sockaddr_in sock_addr;
 	sock_addr.sin_family = AF_INET;

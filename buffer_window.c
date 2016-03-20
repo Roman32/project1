@@ -311,11 +311,11 @@ int isBuffFilled(){
 int writeToBufferS(Packet pckt){
 	int startLocation = (pckt.tcpHdr.seq-1) % 64;
 	printf("startLocation in buffer: %d\n",startLocation*MSS);
-	//printf("payload is %s\n",pckt.payload);
+	printf("payload is %s\n",pckt.payload);
 	memcpy(&servBuffer[startLocation*MSS],pckt.payload,MSS);
 	char test[MSS];
 	memcpy(&test,&servBuffer[startLocation*MSS],MSS);
-	//printf("test is %d\n",test);
+	printf("test is %d\n",test);
 	bytesInBuff += MSS;
 	return 0;
 }
@@ -328,6 +328,7 @@ int readFromBufferS(char pktBuffer[],int bytesOut, int serverReadIndex){
 		printf("The Buffer is empty!\n");
 	}else{
 		int startLocation =serverReadIndex;
+		printf("IN READ FROM BUFFER S.  SL: %d\n",startLocation);
  		memcpy(pktBuffer,servBuffer+(startLocation*MSS),bytesOut);
  		//servReadIndex++;
  		//if(serverReadIndex == 64){servReadIndex = 0;}
