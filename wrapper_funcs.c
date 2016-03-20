@@ -87,7 +87,7 @@ ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
 	bufferCheck.sin_family = AF_INET;
 	bufferCheck.sin_port = htons(CPTLRECVSENDPORT);
 	bufferCheck.sin_addr.s_addr = 0;
-	int bytesToSend = sendto(sock,(char *)x,sizeof(uint32_t),0,(struct sockaddr*)&bufferCheck,sizeof(bufferCheck));
+	int bytesToSend = sendto(check_sock,(char *)x,sizeof(uint32_t),0,(struct sockaddr*)&bufferCheck,sizeof(bufferCheck));
 
 	socklen_t leng;
 	struct sockaddr_in sock_addr;

@@ -96,9 +96,9 @@ extern int isBuffFull;
 extern int numberOfPacketsInWindow;
 int bytesInBuff;
 int lastSerIndexSent = 1;
-uint64_t rto = 3000000;
+uint64_t rto = 10000;
 float dev = 0;
-float est_rtt = 4000000;
+float est_rtt = 10000;
 int first_rto_calc = 1;
 float alpha = 7.0 / 8.0;
 float small_delta = 1.0 / 8.0;
@@ -110,7 +110,7 @@ int receivedFileName = 0;
 TrollHeader head;
 Packet pckt;
 Packet pcktS;
-
+int last_seq_sent = 0;
 void send_to_timer(uint8_t packet_type,
 	uint32_t seq_num,
 	uint64_t tv_sec,
@@ -336,7 +336,7 @@ int main(int argc, char argv[]){
 				readFromBufferC(buffer,bytesIn);
 				//printf("Bytes read from buffer %d\n",);
 
-				//printf("Decoded bytes coming out \n\n%s\n",buffer);
+				printf("Decoded bytes coming out SN: %d \n\n%s\n",seq_num,buffer);
 
 				//check that bytes were written fully then send message to SEND() letting
 				//it know that it is ok to send another packet
@@ -476,13 +476,14 @@ int main(int argc, char argv[]){
 								
 
 				if(receivedFileSize == 0 && bytes == 40){
+					last_seq_sent = 1;
 				   receivedFileSize = 1;
 					uint32_t n;
 					memcpy(&n,&pcktS.payload,4);
 					printf("first data is %d\n",ntohl(n));
-					printf("----WRITE TO BUFFER----\n");
+					printf("----WRITE TO BUFFER FILE SIZE----\n");
 					writeToBufferS(pcktS);
-					bzero(&bufferOut,sizeof(bufferOut));
+					//bzero(&bufferOut,sizeof(bufferOut));
 					char toServer[MSS];
 					bzero(&toServer,MSS);
 					printf("----READ TO BUFFER----\n");
@@ -492,12 +493,14 @@ int main(int argc, char argv[]){
 					//put received info into buffer
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
+					serWinStatus[0] = 1;
 				}
 				if(receivedFileSize == 1 && bytes == 56 && receivedFileName == 0){
+					last_seq_sent = 2;
 					receivedFileName = 1;
-					printf("----WRITE TO BUFFER----\n");
+					printf("----WRITE TO BUFFER FILE NAME----\n");
 					writeToBufferS(pcktS);
-					bzero(&bufferOut,sizeof(bufferOut));
+					//bzero(&bufferOut,sizeof(bufferOut));
 					char toServer[MSS];
 					bzero(&toServer,MSS);
 					printf("----READ TO BUFFER----\n");
@@ -507,40 +510,64 @@ int main(int argc, char argv[]){
 					//put received info into buffer
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
+					serWinStatus[1] = 1;
 				}
 				uint32_t seq;
 			    memcpy(&seq,&pcktS.tcpHdr.seq,sizeof(uint32_t));
 				
 				printf("Packet seq is %d  expected: %d\n",seq,expSeq);
-				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56 && expSeq == seq ){
+				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56 && /*last_seq_sent < seq*/){
 					serWindow[(seq-1) % 64].serBuffIndex = ((seq-1) % 64);
 					serWindow[(seq-1) % 64].size = bytes -36;
-					serWinStatus[(seq-1) % 64] = 1;
+					
 					printf("----WRITE TO BUFFER----\n");
 					writeToBufferS(pcktS);
 					bzero(&bufferOut,sizeof(bufferOut));
 					char toServer[MSS];
 					bzero(&toServer,MSS);
 					printf("----READ TO BUFFER----\n");
-					readFromBufferS(toServer,bytes-36,(seq-1) % 64);
-					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
-					/*
+					//readFromBufferS(toServer,bytes-36,(seq-1) % 64);
+					//bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+					
 					int lastSerIndexSentplusone = lastSerIndexSent+1;
-					if(lastSerIndexSentplusone == 20){lastSerIndexSentplusone = 0;}
-					if(lastSerIndexSentplusone == (seq-1) % 64){
+					printf("lastSerIndexSentplusone = %d\n",lastSerIndexSentplusone);
+					if(lastSerIndexSentplusone == 64){
+						int yy;
+						for(yy = 0; yy < 64; yy++){serWinStatus[yy] = -1;}
+
+						lastSerIndexSentplusone = 0;
+					}
+					lastSerIndexSent = lastSerIndexSentplusone;
+					serWinStatus[(seq-1) % 64] = 1;
+					printf("\n-------------serverWinStatus-----------\n");
+					int zz;
+					for(zz = 0; zz < 64; zz++){
+						printf("I: %d val %d\n",zz,serWinStatus[zz]);
+						
+					}
+					int goodtosend = 1;
+					for(zz = 0; zz < (seq-1) % 64; zz++){
+						//printf("I: %d val %d\n",zz,serWinStatus[zz]);
+						if(serWinStatus[zz] == -1){goodtosend = -1;break;}
+					}
+					printf("---------end serverWindStatus--------\n");
+					printf("G2S: %d Sm64 %d\n",goodtosend,(seq-1) % 64);
+					if( goodtosend == 1/*lastSerIndexSentplusone == (seq-1) % 64*/){
 						int v;
 						for(v = (seq-1) % 64; v < 64; v++){
 							if(serWinStatus[v] == 1){
-								readFromBufferS(toServer,serWindow[v].size,serWindow[v].serBuffIndex);
-								printf("FILEDATA SENDING TO SERVER is: %s\n",toServer);
+								printf("Seq: %d V: %d servWindow[%d].serBuffIndex = %d\n",seq,v,v,serWindow[v].serBuffIndex);
+								int bytesR = readFromBufferS(toServer,serWindow[v].size,serWindow[v].serBuffIndex);
+								printf("V: %d numB: %d FILEDATA SENDING TO SERVER is: %s\n",v,bytesR,toServer);
 								bytesToServ = sendto(sockOut,toServer,serWindow[v].size,0,(struct sockaddr*)&final,sizeof(final));
+								last_seq_sent = seq;
 							}else{
 								break;
 							}
 							
 							
 						}
-					}*/
+					}
 					//put received info into buffer
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
@@ -637,7 +664,7 @@ void send_to_SEND(int sock, struct sockaddr_in name){
 
 void send_to_timer(uint8_t packet_type,uint32_t seq_num,uint64_t tv_sec,uint64_t tv_usec,int sock,struct sockaddr_in name){
 	printf("\n\n*****SENDING TO TIMER****\n\n");
-	if(tv_sec == 0 && tv_usec < 1000){tv_usec = 1000;}
+	if(tv_sec == 0 && tv_usec < 10000){tv_usec = 10000;}
 	int buffSize = sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t);
 	//printf("buffsize is %d\n",buffSize);
 	printf("Send Packet T: %d SN: %d TV_SEC: %ld TV_USEC %ld\n",packet_type,seq_num,tv_sec,tv_usec);
@@ -763,7 +790,7 @@ int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 	printf("Bytes read from buffer %d\n",readFromBufferToResend(resendBuf,pktSize,location));
 
 	//printf("Decoded bytes coming out \n\n%s\n",buffer);
-
+	printf("Decoded bytes coming out SN: %d \n\n%s\n",s_num,resendBuf);
 	//check that bytes were written fully then send message to SEND() letting
 	//it know that it is ok to send another packet
 	printf("bytes resending : %s\n",resendBuf);
