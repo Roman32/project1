@@ -76,9 +76,15 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 }
 /*Sets up RECV call properly */
 ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
-	char x[sizeof(uint32_t)];
-	int size = htonl(length);
-	memcpy(&x,&size,4);
+	
+	uint32_t size = htonl(length);
+	int check = 0;
+	/*int buffSize = sizeof(uint32_t);
+	char *cli_buf = malloc(buffSize);
+	bzero(cli_buf,buffSize);
+	uint32_t size = length;
+	memcpy(cli_buf,&size,4);
+	printf("The size requested is %d bytes\n", htonl(atoi(cli_buf)));*/
 	
 	struct sockaddr_in bufferCheck;
 	int check_sock;
@@ -87,7 +93,8 @@ ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
 	bufferCheck.sin_family = AF_INET;
 	bufferCheck.sin_port = htons(CPTLRECVSENDPORT);
 	bufferCheck.sin_addr.s_addr = 0;
-	int bytesToSend = sendto(sock,(char *)x,sizeof(uint32_t),0,(struct sockaddr*)&bufferCheck,sizeof(bufferCheck));
+	printf("size demanded is %d\n",ntohl(size));
+	int bytesToSend = sendto(check_sock,&size,sizeof(size),0,(struct sockaddr*)&bufferCheck,sizeof(bufferCheck));
 
 	socklen_t leng;
 	struct sockaddr_in sock_addr;
@@ -96,8 +103,6 @@ ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
 	sock_addr.sin_addr.s_addr = 0;
 	leng = sizeof(sock_addr);
 	int recv = recvfrom(sock,(char *)buffer,length,flags,(struct sockaddr*)&sock_addr,&leng);
-	
-	
 	
 	
 	return recv;
