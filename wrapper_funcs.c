@@ -76,6 +76,19 @@ ssize_t SEND(int sock,const void *buffer,size_t length,int flags){
 }
 /*Sets up RECV call properly */
 ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
+	char x[sizeof(uint32_t)];
+	int size = htonl(length);
+	memcpy(&x,&size,4);
+	
+	struct sockaddr_in bufferCheck;
+	int check_sock;
+	int sockLength =sizeof(bufferCheck);
+	check_sock= socket(AF_INET,SOCK_DGRAM,0);
+	bufferCheck.sin_family = AF_INET;
+	bufferCheck.sin_port = htons(CPTLRECVSENDPORT);
+	bufferCheck.sin_addr.s_addr = 0;
+	int bytesToSend = sendto(sock,(char *)x,sizeof(uint32_t),0,(struct sockaddr*)&bufferCheck,sizeof(bufferCheck));
+
 	socklen_t leng;
 	struct sockaddr_in sock_addr;
 	sock_addr.sin_family = AF_INET;
@@ -84,13 +97,8 @@ ssize_t RECV(int sock,const void *buffer,size_t length,int flags){
 	leng = sizeof(sock_addr);
 	int recv = recvfrom(sock,(char *)buffer,length,flags,(struct sockaddr*)&sock_addr,&leng);
 	
-	struct sockaddr_in bufferCheck;
-	int check_sock;
-	int sockLength =sizeof(bufferCheck);
-	check_sock= socket(AF_INET,SOCK_DGRAM,0);
-	bufferCheck.sin_family = AF_INET;
-	bufferCheck.sin_port = htons(TCPDRECVCHECK);
-	bufferCheck.sin_addr.s_addr = 0;
+	
+	
 	
 	return recv;
 }
