@@ -151,7 +151,6 @@ int main(int argc, char argv[]){
 	char bufferOut[1036];
 	char ackBuffer[36]; //36 = tcp header + troll header
 	uint32_t seq_num = 0;
-	int num = 0;
     	//for determining time at which sleep started
 	int l;
 	for(l = 0; l < 64; l++){
@@ -444,24 +443,6 @@ int main(int argc, char argv[]){
 
 			 printf("\n*****END: RECEIVED ACK FROM SERVER TCPD *****\n\n");
 		}
-		/*
-		if(FD_ISSET(recv_sock,&portUp)){
-			printf("\n\n\n***************RECEIVING FROM RECV ********************\n\n");
-			char sizeBuff[sizeof(uint32_t)];
-			int len = sizeof(cptl_recv);
-			recvfrom(recv_sock,sizeBuff,sizeof(uint32_t),0,(struct sockaddr *)&cptl_recv,&len);
-			int requested;
-			int bytesWanted =0;
-			char toServer[MSS];
-			bzero(&toServer,MSS);
-			memcpy(&requested,sizeBuff,4);
-			requested = ntohl(requested);
-			printf("Value of requested is %d: \n",requested);
-			readFromBufferS(toServer,requested,num);
-			bytesToServ = sendto(sockOut,toServer,requested,0,(struct sockaddr*)&final,sizeof(final));
-			printf("Bytes sent to server:%d\n",bytesToServ);
-			num++;
-		}*/			
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
 			fflush(stdout);
@@ -483,7 +464,16 @@ int main(int argc, char argv[]){
 				printf("Checksum is *****SAME***** for packet %d\n",pcktS.tcpHdr.seq);
 				printf("Checksum rcvd is: %hu\n",checkRecv);
 				printf("Checksum calculated is %hu\n",check);
-												
+				
+				/*if(FD_ISSET(recv_sock,&portUp)){
+					char sizeBuff[sizeof(uint32_t)];
+					int len = sizeof(cptl_recv);
+					int bytesWanted = recvfrom(recv_sock,sizeBuff,sizeof(uint32_t),0,(struct sockaddr *)&cptl_recv,&len);
+					int requested;
+					memcpy(&requested,sizeBuff,4);
+					requested = ntohl(requested);
+					printf("Value of requested is %d: \n",requested);*/
+								
 
 				if(receivedFileSize == 0 && bytes == 40){
 					last_seq_sent = 1;
@@ -497,9 +487,9 @@ int main(int argc, char argv[]){
 					char toServer[MSS];
 					bzero(&toServer,MSS);
 					printf("----READ TO BUFFER----\n");
-					//readFromBufferS(toServer,MSS,0);
+					readFromBufferS(toServer,MSS,0);
 					printf("FILESIZE SENDING TO SERVER is: %d\n",atoi(toServer));
-					//bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
@@ -514,23 +504,19 @@ int main(int argc, char argv[]){
 					char toServer[MSS];
 					bzero(&toServer,MSS);
 					printf("----READ TO BUFFER----\n");
-					//readFromBufferS(toServer,bytes-36,1);
+					readFromBufferS(toServer,bytes-36,1);
 					printf("FILENAME SENDING TO SERVER is: %s\n",toServer);
-					//bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
+					bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
 					//put received info into buffer
 					//send ack to troll on server side
 					send_ack(pcktS.tcpHdr.seq,sockOut,ackToServerTroll);
 					serWinStatus[1] = 1;
 				}
 				uint32_t seq;
-			    	memcpy(&seq,&pcktS.tcpHdr.seq,sizeof(uint32_t));
+			    memcpy(&seq,&pcktS.tcpHdr.seq,sizeof(uint32_t));
 				
 				printf("Packet seq is %d  expected: %d\n",seq,expSeq);
-
-				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56  /*last_seq_sent < seq*/){
-
-				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56 /*&& last_seq_sent < seq*/){
-
+				if(receivedFileName == 1 && receivedFileSize == 1 && bytes != 56 /*last_seq_sent < seq*/){
 					serWindow[(seq-1) % 64].serBuffIndex = ((seq-1) % 64);
 					serWindow[(seq-1) % 64].size = bytes -36;
 					
@@ -542,7 +528,7 @@ int main(int argc, char argv[]){
 					printf("----READ TO BUFFER----\n");
 					//readFromBufferS(toServer,bytes-36,(seq-1) % 64);
 					//bytesToServ = sendto(sockOut,toServer,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
-
+					
 					int lastSerIndexSentplusone = lastSerIndexSent+1;
 					printf("lastSerIndexSentplusone = %d\n",lastSerIndexSentplusone);
 					if(lastSerIndexSentplusone == 64){
@@ -606,7 +592,7 @@ int main(int argc, char argv[]){
 
 			//send bytes to server
 			//bytesToServ = sendto(sockOut,bufferOut+36,bytes-36,0,(struct sockaddr*)&final,sizeof(final));
-			//printf("Bytes sent to server:%d\n",bytesToServ);
+			printf("Bytes sent to server:%d\n",bytesToServ);
 		}
 		FD_ZERO(&portUp);
 		FD_SET(sockIn, &portUp);
