@@ -444,7 +444,7 @@ int main(int argc, char argv[]){
 
 			 printf("\n*****END: RECEIVED ACK FROM SERVER TCPD *****\n\n");
 		}
-		
+		/*
 		if(FD_ISSET(recv_sock,&portUp)){
 			printf("\n\n\n***************RECEIVING FROM RECV ********************\n\n");
 			char sizeBuff[sizeof(uint32_t)];
@@ -461,7 +461,7 @@ int main(int argc, char argv[]){
 			bytesToServ = sendto(sockOut,toServer,requested,0,(struct sockaddr*)&final,sizeof(final));
 			printf("Bytes sent to server:%d\n",bytesToServ);
 			num++;
-		}			
+		}*/			
 		//receiving from troll on server side
 		if(FD_ISSET(sockOut,&portUp)){
 			fflush(stdout);
