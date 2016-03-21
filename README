@@ -1,7 +1,8 @@
 README for ftps and ftpc programs.
 
 Author: Brian Parks and Roman Claprood
-Project: TCP over UDP with Troll Checkpoint 1
+Project: TCP over UDP with Troll
+Description: Basic overview of files. For more detail on implementation see report.
 Due Date: 02/19/16
 
 To compile, use the command "make". Will make 3 executables: ftpc,ftps,tcpd,timer and testT
@@ -10,7 +11,8 @@ To run, the client (ftpc, tcpd and troll MUST be on Epsilon machine!
 To run ftpc  is ./ftpc filename.
 to run tcpd is ./tcpd.
 
-To run troll is troll 6666 -s0 -x0 -g25 -t
+To run troll on client side is troll 8989 -s0 -x0 -g25 -t
+To run troll on server side is troll 9898 -s0 -x0 -g25 -t
 
 To Run the server it must be on the BETA machine!
 to run ftps is ./ftps 9997
@@ -51,7 +53,13 @@ wrapper_funcs.h
 	
 wrapper_funcs.c
 	Same implentations for wrapper functions as previous lab
-	
+
+buffer_window.h
+	Header for buffer functions
+
+buffer_window.c
+	Implementations for buffer and window functions and structures.
+
 Makefile
 	run make to compile code and create executables
-	
+

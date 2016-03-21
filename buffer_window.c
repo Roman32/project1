@@ -124,7 +124,7 @@ int removeFromCWindow(int seq_num){
 
 
 int isCWindowFull(){
-	printf("numberOfPacketsInWindow is %d\n",numberOfPacketsInWindow);
+	//printf("numberOfPacketsInWindow is %d\n",numberOfPacketsInWindow);
 	if(windowStartOfPacketBlock == windowEndOfPacketBlockPlusOne){
 		if(numberOfPacketsInWindow < 20){
 			return 0; //window is completly empty
@@ -138,9 +138,9 @@ int isCWindowFull(){
 }
 
 int getOldestPacketInWindow(){
-	 printf("getting old packet\n");
+	 //printf("getting old packet\n");
 	 uint32_t s_num = cliWindow[windowStartOfPacketBlock].seq_num;
-	 printf("returning old packet\n");
+	 //printf("returning old packet\n");
 	 return(s_num);
 
 }
@@ -193,14 +193,14 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				memcpy(cliBuffer+cliEnd,pktBuffer,bytesToWrite);
 				cliEnd += bytesToWrite;
 				bytesWritten = bytesToWrite;
-				printf("Bytes in Buffer is %d\n",bytesInBuff);
+				//printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite) == (MAX_BUFF)){
 				bytesInBuff += bytesToWrite;
 				memcpy(cliBuffer+cliEnd,pktBuffer,bytesToWrite);
 				cliEnd = 0;
 				bytesWritten = bytesToWrite;
-				printf("Bytes in Buffer is %d\n",bytesInBuff);
+				//printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite > MAX_BUFF) && cliStart != 0){
 				int remainder = (MAX_BUFF - cliEnd);
@@ -209,7 +209,7 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				cliEnd = bytesToWrite - remainder;
 				bytesWritten = bytesToWrite;
 				bytesInBuff += bytesToWrite;
-				printf("Bytes in Buffer is %d\n",bytesInBuff);
+				//printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 			}else if((cliEnd+bytesToWrite > MAX_BUFF && cliStart == 0)){
 				int remainder = (MAX_BUFF - cliEnd);
@@ -218,7 +218,7 @@ int writeToBufferC(int bytesToWrite, char pktBuffer[],int seq_num){
 				bytesInBuff += remainder;
 				bytesWritten = remainder;
 				isBuffFull =1;
-				printf("Bytes in Buffer is %d\n",bytesInBuff);
+				//printf("Bytes in Buffer is %d\n",bytesInBuff);
 				printf("Value of cliEnd is %d\n",cliEnd);
 				printf("Value of isBuffFull %d\n",isBuffFull);
 			}
@@ -311,11 +311,11 @@ int isBuffFilled(){
 int writeToBufferS(Packet pckt){
 	int startLocation = (pckt.tcpHdr.seq-1) % 64;
 	printf("startLocation in buffer: %d\n",startLocation*MSS);
-	printf("payload is %s\n",pckt.payload);
+	//printf("payload is %s\n",pckt.payload);
 	memcpy(&servBuffer[startLocation*MSS],pckt.payload,MSS);
 	char test[MSS];
 	memcpy(&test,&servBuffer[startLocation*MSS],MSS);
-	printf("test is %d\n",test);
+	//printf("test is %d\n",test);
 	bytesInBuff += MSS;
 	return 0;
 }
@@ -328,7 +328,7 @@ int readFromBufferS(char pktBuffer[],int bytesOut, int serverReadIndex){
 		printf("The Buffer is empty!\n");
 	}else{
 		int startLocation =serverReadIndex;
-		printf("IN READ FROM BUFFER S.  SL: %d\n",startLocation);
+		//printf("IN READ FROM BUFFER S.  SL: %d\n",startLocation);
  		memcpy(pktBuffer,servBuffer+(startLocation*MSS),bytesOut);
  		//servReadIndex++;
  		//if(serverReadIndex == 64){servReadIndex = 0;}

@@ -336,7 +336,7 @@ int main(int argc, char argv[]){
 				readFromBufferC(buffer,bytesIn);
 				//printf("Bytes read from buffer %d\n",);
 
-				printf("Decoded bytes coming out SN: %d \n\n%s\n",seq_num,buffer);
+				//printf("Decoded bytes coming out SN: %d \n\n%s\n",seq_num,buffer);
 
 				//check that bytes were written fully then send message to SEND() letting
 				//it know that it is ok to send another packet
@@ -558,7 +558,7 @@ int main(int argc, char argv[]){
 							if(serWinStatus[v] == 1){
 								printf("Seq: %d V: %d servWindow[%d].serBuffIndex = %d\n",seq,v,v,serWindow[v].serBuffIndex);
 								int bytesR = readFromBufferS(toServer,serWindow[v].size,serWindow[v].serBuffIndex);
-								printf("V: %d numB: %d FILEDATA SENDING TO SERVER is: %s\n",v,bytesR,toServer);
+								//printf("V: %d numB: %d FILEDATA SENDING TO SERVER is: %s\n",v,bytesR,toServer);
 								bytesToServ = sendto(sockOut,toServer,serWindow[v].size,0,(struct sockaddr*)&final,sizeof(final));
 								last_seq_sent = seq;
 							}else{
@@ -790,7 +790,7 @@ int resend_packet(uint32_t s_num, int sockIn, int timer_ssock){
 	printf("Bytes read from buffer %d\n",readFromBufferToResend(resendBuf,pktSize,location));
 
 	//printf("Decoded bytes coming out \n\n%s\n",buffer);
-	printf("Decoded bytes coming out SN: %d \n\n%s\n",s_num,resendBuf);
+	//printf("Decoded bytes coming out SN: %d \n\n%s\n",s_num,resendBuf);
 	//check that bytes were written fully then send message to SEND() letting
 	//it know that it is ok to send another packet
 	printf("bytes resending : %s\n",resendBuf);

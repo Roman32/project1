@@ -121,7 +121,7 @@ int CLOSE(int socket){
 			break;
 		}
 	}
-	if(fileSize == totalRecv && windowsEmpty == 1){
+	if(fileSize == totalRecv /*&& windowsEmpty == 1*/){
 		printf("Closing the connection!\n");
 		return close(socket);
 	}

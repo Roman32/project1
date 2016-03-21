@@ -1,8 +1,8 @@
 #ifndef globals
 #define globals
 
-#define clientIP "164.107.113.21" //epsilon
-#define serverIP "164.107.113.18" //beta
+#define clientIP "164.107.113.10" //epsilon
+#define serverIP "164.107.113.11" //beta
 #define TCPDIN 9999
 #define TCPDOUT 9998
 #define TCPDRECVCHECK 9995

@@ -117,7 +117,7 @@ void readAndSendFile(char *fname,int sock,int size){
 		}
 		close(fileName);
 		printf("Total of %d bytes have been sent.\n",totalSent);	
-		close(sock);
+		CLOSE(sock);
 	}
 	
 }
